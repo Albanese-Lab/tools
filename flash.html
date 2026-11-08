@@ -1,0 +1,1300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Biotage Flash Plotter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #16211f;
+    --surface: #ffffff;
+    --surface-alt: #f2f5f4;
+    --border: #dbe3e1;
+    --muted: #5c6d69;
+    --accent: #009988;
+    --accent-ink: #ffffff;
+
+    --data-teal: #009988;
+    --data-orange: #E69F00;
+    --data-pink: #BB5566;
+    --data-blue: #004488;
+    --data-brown: #994F00;
+    --data-gradient: #6b7a76;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #e7efed;
+      --surface: #141c1b;
+      --surface-alt: #1b2725;
+      --border: #2c3936;
+      --muted: #9fb0ac;
+      --accent: #2bcdb8;
+      --accent-ink: #06201c;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ink: #e7efed;
+    --surface: #141c1b;
+    --surface-alt: #1b2725;
+    --border: #2c3936;
+    --muted: #9fb0ac;
+    --accent: #2bcdb8;
+    --accent-ink: #06201c;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background: var(--surface);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    line-height: 1.45;
+  }
+
+  .mono {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  header.app-header {
+    padding: 14px 22px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  header.app-header h1 {
+    font-size: 1.15rem;
+    margin: 0;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+
+  header.app-header .subtitle {
+    color: var(--muted);
+    font-size: 0.88rem;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 18px;
+    align-items: start;
+    padding: 18px;
+  }
+
+  @media (max-width: 900px) {
+    .layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .control-panel {
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: sticky;
+    top: 18px;
+  }
+
+  @media (max-width: 900px) {
+    .control-panel { position: static; }
+  }
+
+  .note {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 0.86rem;
+    color: var(--ink);
+  }
+
+  .note strong { color: var(--accent); }
+
+  h2.section-title {
+    font-size: 0.95rem;
+    margin: 0 0 6px 0;
+    font-weight: 600;
+  }
+
+  .panel-block {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .panel-block-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-block-header .badge {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 1px 6px;
+  }
+
+  label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-bottom: 3px;
+    color: var(--ink);
+  }
+
+  label.check {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  input[type="text"], input[type="file"] {
+    width: 100%;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--ink);
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 0.82rem;
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  }
+
+  input[type="text"]:focus, input[type="file"]:focus, button:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    accent-color: var(--accent);
+  }
+
+  .field { margin-bottom: 8px; }
+  .field:last-child { margin-bottom: 0; }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .override-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 5px;
+    margin-top: 4px;
+  }
+
+  .override-row label {
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-weight: 400;
+    margin-bottom: 1px;
+  }
+
+  .sample-slot {
+    border: 1px dashed var(--border);
+    border-radius: 7px;
+    padding: 9px;
+    background: var(--surface-alt);
+  }
+
+  .sample-slot + .sample-slot { margin-top: 8px; }
+
+  .sample-slot-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+
+  .sample-slot-header .swatch-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  details.overrides {
+    margin-top: 4px;
+  }
+
+  details.overrides summary {
+    cursor: pointer;
+    font-size: 0.72rem;
+    color: var(--muted);
+    user-select: none;
+  }
+
+  .detected-line {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 6px;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    word-break: break-word;
+  }
+
+  .error-line {
+    font-size: 0.75rem;
+    color: var(--data-pink);
+    margin-top: 6px;
+    font-weight: 500;
+  }
+
+  button {
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border-radius: 6px;
+    padding: 7px 12px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--ink);
+  }
+
+  button.primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: 1px solid var(--accent);
+  }
+
+  button.small {
+    font-size: 0.74rem;
+    padding: 5px 9px;
+  }
+
+  button.danger-ish {
+    color: var(--data-pink);
+  }
+
+  button:hover { filter: brightness(0.97); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .main-area {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .empty-state {
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.92rem;
+  }
+
+  .plot-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    padding: 14px 16px 16px;
+  }
+
+  .plot-card h3 {
+    margin: 0 0 2px 0;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .plot-card .plot-sub {
+    font-size: 0.76rem;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .svg-wrap {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .chart-actions{ display:flex; gap:6px; margin-top:6px; }
+
+  svg.chart {
+    display: block;
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  }
+
+  .swatch-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 10px;
+    font-size: 0.78rem;
+  }
+
+  .swatch-row .item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .swatch-row .dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 2px;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+
+  .gradient-caption {
+    font-size: 0.75rem;
+    color: var(--data-gradient);
+    margin-top: 4px;
+  }
+
+  .table-toggle {
+    margin-top: 12px;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    margin-top: 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+
+  table.data-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.76rem;
+  }
+
+  table.data-table caption {
+    text-align: left;
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 6px 8px;
+    color: var(--ink);
+    background: var(--surface-alt);
+  }
+
+  table.data-table th, table.data-table td {
+    padding: 4px 9px;
+    border-bottom: 1px solid var(--border);
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  table.data-table th:first-child, table.data-table td:first-child {
+    text-align: left;
+  }
+
+  table.data-table thead th {
+    background: var(--surface-alt);
+    position: sticky;
+    top: 0;
+  }
+
+  .demo-tag {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    padding: 1px 5px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  footer.app-footer {
+    padding: 16px 22px 30px;
+    font-size: 0.74rem;
+    color: var(--muted);
+    text-align: center;
+  }
+</style>
+<script src="figure-export.js" data-tool="Flash"></script>
+</head>
+<body>
+<header class="app-header">
+  <h1>Biotage Flash Plotter</h1>
+  <span class="subtitle">Overlay Biotage Isolera flash-chromatography runs — best-effort column detection, see note below.</span>
+</header>
+
+<div class="layout">
+  <div class="control-panel" id="controlPanel">
+    <div class="note">
+      <strong>Heads up:</strong> there's no single confirmed Biotage export format — column headers in "File &gt; Export" or the Isolera Run Report can vary by instrument and software version. This tool <strong>guesses</strong> which columns are volume / UV / %B by matching keywords in the header row, and shows you its guess under each upload so you can sanity-check it. If it guesses wrong, type the exact column name into the override box for that sample — that always wins over the guess.
+    </div>
+
+    <div id="panelsControlHost"></div>
+
+    <div class="btn-row">
+      <button class="primary" id="addPanelBtn" type="button">+ Add panel</button>
+    </div>
+  </div>
+
+  <div class="main-area" id="mainArea">
+    <!-- plot cards injected here -->
+  </div>
+</div>
+
+<footer class="app-footer">
+  Albanese Lab Plotting Tools &middot; Biotage Flash Plotter &middot; all parsing happens locally in your browser — nothing is uploaded anywhere.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- Demo CSV (synthetic, not real instrument data) ----------
+  var DEMO_CSV = [
+"Volume (CV),Volume (mL),UV 1_254nm (mAU),UV 2_280nm (mAU),Conc B (%)",
+"0.000,0.00,15.00,8.00,0.0",
+"0.100,0.50,15.00,8.00,2.5",
+"0.200,1.00,15.03,8.02,5.0",
+"0.300,1.50,15.19,8.11,7.5",
+"0.400,2.00,16.10,8.65,10.0",
+"0.500,2.50,20.19,11.04,12.5",
+"0.600,3.00,34.89,19.64,15.0",
+"0.700,3.50,76.97,44.28,17.5",
+"0.800,4.00,172.03,99.92,20.0",
+"0.900,4.50,338.61,197.43,22.5",
+"1.000,5.00,557.44,325.53,25.0",
+"1.100,5.50,754.52,440.89,27.5",
+"1.200,6.00,835.00,488.00,30.0",
+"1.300,6.50,754.53,440.90,32.5",
+"1.400,7.00,557.48,325.57,35.0",
+"1.500,7.50,338.76,197.59,37.5",
+"1.600,8.00,172.50,100.46,40.0",
+"1.700,8.50,78.44,45.93,42.5",
+"1.800,9.00,38.98,24.27,45.0",
+"1.900,9.50,30.54,22.73,47.5",
+"2.000,10.00,39.83,35.45,50.0",
+"2.100,10.50,64.54,63.86,52.5",
+"2.200,11.00,108.13,113.19,55.0",
+"2.300,11.50,174.32,187.97,57.5",
+"2.400,12.00,262.23,287.28,60.0",
+"2.500,12.50,362.97,401.08,62.5",
+"2.600,13.00,459.19,509.77,65.0",
+"2.700,13.50,529.27,588.93,67.5",
+"2.800,14.00,555.00,618.00,70.0",
+"2.900,14.50,529.27,588.93,72.5",
+"3.000,15.00,459.19,509.77,75.0",
+"3.100,15.50,362.97,401.08,77.5",
+"3.200,16.00,262.23,287.28,80.0",
+"3.300,16.50,174.31,187.96,82.5",
+"3.400,17.00,108.11,113.18,85.0",
+"3.500,17.50,64.35,63.75,87.5",
+"3.600,18.00,38.73,34.80,90.0",
+"3.700,18.50,25.34,19.69,92.5",
+"3.800,19.00,19.09,12.62,95.0",
+"3.900,19.50,16.47,9.66,97.5",
+"4.000,20.00,15.48,8.54,100.0"
+  ].join("\n");
+
+  // ---------- Keyword lists (priority order) ----------
+  var VOLUME_KEYWORDS = ["volume (ml)", "volume(ml)", "volume", "ml", "cv"];
+  var UV_KEYWORDS = ["uv 1", "uv1", "254", "280", "uv", "mau", "absorbance"];
+  var GRADIENT_KEYWORDS = ["conc b", "%b", "% b", "buffer b", "gradient"];
+
+  var SERIES_COLORS = ["--data-teal", "--data-orange", "--data-pink", "--data-blue", "--data-brown"];
+
+  // ---------- State ----------
+  var state = {
+    panels: [],
+    nextPanelId: 1,
+    nextSampleId: 1
+  };
+
+  function makeSample() {
+    return {
+      id: state.nextSampleId++,
+      fileName: "",
+      csvText: null,
+      label: "",
+      overrideVol: "",
+      overrideUV: "",
+      overrideGrad: "",
+      detected: null,   // {vol, uv, grad}
+      error: null,
+      parsed: null       // array of {volume, rawUV, normUV, grad}
+    };
+  }
+
+  function makePanel() {
+    var p = {
+      id: state.nextPanelId++,
+      label: "peptide purification, run " + state.nextPanelId,
+      showGradient: true,
+      samples: [],
+      tableOpen: false
+    };
+    p.samples.push(makeSample());
+    p.samples.push(makeSample());
+    p.samples.push(makeSample());
+    return p;
+  }
+
+  // ---------- CSV parsing ----------
+  function parseCSV(text) {
+    // Basic CSV parser: handles quoted fields with commas, CRLF/LF.
+    var rows = [];
+    var i = 0, len = text.length;
+    var row = [], field = "";
+    var inQuotes = false;
+    while (i < len) {
+      var c = text[i];
+      if (inQuotes) {
+        if (c === '"') {
+          if (text[i + 1] === '"') { field += '"'; i += 2; continue; }
+          inQuotes = false; i++; continue;
+        } else {
+          field += c; i++; continue;
+        }
+      } else {
+        if (c === '"') { inQuotes = true; i++; continue; }
+        if (c === ',') { row.push(field); field = ""; i++; continue; }
+        if (c === '\r') { i++; continue; }
+        if (c === '\n') {
+          row.push(field); field = "";
+          rows.push(row); row = [];
+          i++; continue;
+        }
+        field += c; i++; continue;
+      }
+    }
+    // last field/row
+    if (field.length > 0 || row.length > 0) {
+      row.push(field);
+      rows.push(row);
+    }
+    // drop trailing fully-empty rows
+    while (rows.length && rows[rows.length - 1].every(function (v) { return v.trim() === ""; })) {
+      rows.pop();
+    }
+    if (!rows.length) return null;
+    var headers = rows[0].map(function (h) { return h; });
+    var dataRows = rows.slice(1);
+    return { headers: headers, rows: dataRows };
+  }
+
+  function detectColumn(headers, keywords, excludeSet) {
+    var lowered = headers.map(function (h) { return h.trim().toLowerCase(); });
+    for (var k = 0; k < keywords.length; k++) {
+      var kw = keywords[k];
+      for (var c = 0; c < headers.length; c++) {
+        if (excludeSet && excludeSet.indexOf(headers[c]) !== -1) continue;
+        if (lowered[c].indexOf(kw) !== -1) {
+          return headers[c];
+        }
+      }
+    }
+    return null;
+  }
+
+  function findHeaderExact(headers, name) {
+    // Case/whitespace-tolerant exact match against a typed override.
+    var target = name.trim().toLowerCase();
+    for (var i = 0; i < headers.length; i++) {
+      if (headers[i].trim().toLowerCase() === target) return headers[i];
+    }
+    return null;
+  }
+
+  function toNumber(v) {
+    if (v === undefined || v === null) return NaN;
+    var s = String(v).trim().replace(/,/g, "");
+    if (s === "") return NaN;
+    var n = parseFloat(s);
+    return isNaN(n) ? NaN : n;
+  }
+
+  // Resolve columns + parse a sample's csvText. Mutates sample in place.
+  function processSample(sample) {
+    sample.error = null;
+    sample.detected = null;
+    sample.parsed = null;
+
+    if (!sample.csvText) return;
+
+    var parsedCSV;
+    try {
+      parsedCSV = parseCSV(sample.csvText);
+    } catch (e) {
+      sample.error = "Couldn't read this file as a CSV. Try re-exporting it from the Isolera software and upload again.";
+      return;
+    }
+
+    if (!parsedCSV || !parsedCSV.headers.length || !parsedCSV.rows.length) {
+      sample.error = "This file looks empty, or didn't have a header row we could find.";
+      return;
+    }
+
+    var headers = parsedCSV.headers;
+
+    // Volume column
+    var volCol;
+    if (sample.overrideVol && sample.overrideVol.trim() !== "") {
+      volCol = findHeaderExact(headers, sample.overrideVol);
+      if (!volCol) {
+        sample.error = "Couldn't find a column named \"" + sample.overrideVol + "\" in this file. Check the exact spelling of the header row.";
+        return;
+      }
+    } else {
+      volCol = detectColumn(headers, VOLUME_KEYWORDS, []);
+    }
+
+    // UV column
+    var uvCol;
+    if (sample.overrideUV && sample.overrideUV.trim() !== "") {
+      uvCol = findHeaderExact(headers, sample.overrideUV);
+      if (!uvCol) {
+        sample.error = "Couldn't find a column named \"" + sample.overrideUV + "\" in this file. Check the exact spelling of the header row.";
+        return;
+      }
+    } else {
+      uvCol = detectColumn(headers, UV_KEYWORDS, volCol ? [volCol] : []);
+    }
+
+    // Gradient column (optional)
+    var gradCol;
+    if (sample.overrideGrad && sample.overrideGrad.trim() !== "") {
+      gradCol = findHeaderExact(headers, sample.overrideGrad);
+      // if override typed but not found, just note it as not found (non-fatal — gradient is optional)
+    } else {
+      var excl = [];
+      if (volCol) excl.push(volCol);
+      if (uvCol) excl.push(uvCol);
+      gradCol = detectColumn(headers, GRADIENT_KEYWORDS, excl);
+    }
+
+    sample.detected = { vol: volCol, uv: uvCol, grad: gradCol };
+
+    if (!volCol || !uvCol) {
+      sample.error = "Couldn't figure out which columns are volume/UV in this file — type the exact column header in the override box below.";
+      return;
+    }
+
+    var volIdx = headers.indexOf(volCol);
+    var uvIdx = headers.indexOf(uvCol);
+    var gradIdx = gradCol ? headers.indexOf(gradCol) : -1;
+
+    var pts = [];
+    for (var r = 0; r < parsedCSV.rows.length; r++) {
+      var row = parsedCSV.rows[r];
+      var vol = toNumber(row[volIdx]);
+      var uv = toNumber(row[uvIdx]);
+      if (isNaN(vol) || isNaN(uv)) continue;
+      var grad = null;
+      if (gradIdx !== -1) {
+        var g = toNumber(row[gradIdx]);
+        grad = isNaN(g) ? null : g;
+      }
+      pts.push({ volume: vol, rawUV: uv, grad: grad });
+    }
+
+    if (!pts.length) {
+      sample.error = "Found volume and UV columns, but couldn't parse any numeric rows out of them. Double check the file isn't using an unusual number format.";
+      return;
+    }
+
+    var min = Infinity, max = -Infinity;
+    for (var i = 0; i < pts.length; i++) {
+      if (pts[i].rawUV < min) min = pts[i].rawUV;
+      if (pts[i].rawUV > max) max = pts[i].rawUV;
+    }
+    var range = max - min;
+    for (var j = 0; j < pts.length; j++) {
+      pts[j].normUV = range === 0 ? 0 : (pts[j].rawUV - min) / range;
+    }
+
+    pts.sort(function (a, b) { return a.volume - b.volume; });
+
+    sample.parsed = pts;
+  }
+
+  // ---------- Rendering: control panel ----------
+  var host = document.getElementById("panelsControlHost");
+  var mainArea = document.getElementById("mainArea");
+  var addPanelBtn = document.getElementById("addPanelBtn");
+
+  addPanelBtn.addEventListener("click", function () {
+    state.panels.push(makePanel());
+    renderAll();
+  });
+
+  function el(tag, attrs, children) {
+    var e = document.createElement(tag);
+    if (attrs) {
+      Object.keys(attrs).forEach(function (k) {
+        if (k === "class") e.className = attrs[k];
+        else if (k === "text") e.textContent = attrs[k];
+        else if (k === "html") e.innerHTML = attrs[k];
+        else e.setAttribute(k, attrs[k]);
+      });
+    }
+    if (children) children.forEach(function (c) { if (c) e.appendChild(c); });
+    return e;
+  }
+
+  function renderControls() {
+    host.innerHTML = "";
+    if (!state.panels.length) {
+      host.appendChild(el("div", { class: "note", text: "No panels yet — click \"+ Add panel\" below to start plotting a run." }));
+      return;
+    }
+    state.panels.forEach(function (panel, panelIdx) {
+      host.appendChild(renderPanelBlock(panel, panelIdx));
+    });
+  }
+
+  function renderPanelBlock(panel, panelIdx) {
+    var block = el("div", { class: "panel-block" });
+
+    var headerRow = el("div", { class: "panel-block-header" }, [
+      el("span", { class: "badge", text: "Panel " + (panelIdx + 1) })
+    ]);
+    if (state.panels.length > 1) {
+      var removeBtn = el("button", { class: "small danger-ish", type: "button", text: "Remove panel" });
+      removeBtn.addEventListener("click", function () {
+        state.panels = state.panels.filter(function (p) { return p.id !== panel.id; });
+        renderAll();
+      });
+      headerRow.appendChild(removeBtn);
+    }
+    block.appendChild(headerRow);
+
+    // Panel label
+    var labelField = el("div", { class: "field" });
+    labelField.appendChild(el("label", { text: "Panel label" }));
+    var labelInput = el("input", { type: "text", value: "" });
+    labelInput.value = panel.label;
+    labelInput.addEventListener("input", function () {
+      panel.label = labelInput.value;
+      renderPlots();
+    });
+    labelField.appendChild(labelInput);
+    block.appendChild(labelField);
+
+    // Show gradient checkbox
+    var gradField = el("div", { class: "field" });
+    var gradLabel = el("label", { class: "check" });
+    var gradCheckbox = el("input", { type: "checkbox" });
+    gradCheckbox.checked = panel.showGradient;
+    gradCheckbox.addEventListener("change", function () {
+      panel.showGradient = gradCheckbox.checked;
+      renderPlots();
+    });
+    gradLabel.appendChild(gradCheckbox);
+    gradLabel.appendChild(document.createTextNode("Show %B gradient trace"));
+    gradField.appendChild(gradLabel);
+    block.appendChild(gradField);
+
+    // Sample slots
+    var samplesHost = el("div", { class: "field" });
+    samplesHost.appendChild(el("label", { text: "Overlay samples" }));
+    panel.samples.forEach(function (sample, sIdx) {
+      samplesHost.appendChild(renderSampleSlot(panel, sample, sIdx));
+    });
+    block.appendChild(samplesHost);
+
+    var btnRow = el("div", { class: "btn-row" });
+    var addSampleBtn = el("button", { class: "small", type: "button", text: "+ Add another sample" });
+    addSampleBtn.addEventListener("click", function () {
+      panel.samples.push(makeSample());
+      renderAll();
+    });
+    var demoBtn = el("button", { class: "small primary", type: "button", text: "Load demo data" });
+    demoBtn.addEventListener("click", function () {
+      var target = panel.samples.find(function (s) { return !s.csvText; });
+      if (!target) {
+        target = makeSample();
+        panel.samples.push(target);
+      }
+      target.csvText = DEMO_CSV;
+      target.fileName = "demo_isolera_run.csv (synthetic)";
+      if (!target.label) target.label = "Demo run (synthetic)";
+      processSample(target);
+      renderAll();
+    });
+    btnRow.appendChild(addSampleBtn);
+    btnRow.appendChild(demoBtn);
+    block.appendChild(btnRow);
+
+    return block;
+  }
+
+  function renderSampleSlot(panel, sample, sIdx) {
+    var colorVar = SERIES_COLORS[sIdx % SERIES_COLORS.length];
+    var slot = el("div", { class: "sample-slot" });
+
+    var slotHeader = el("div", { class: "sample-slot-header" });
+    var swatch = el("span", {
+      class: "swatch-label",
+      html: '<span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:var(' + colorVar + ');margin-right:5px;"></span>Sample ' + (sIdx + 1)
+    });
+    slotHeader.appendChild(swatch);
+    if (panel.samples.length > 1) {
+      var removeSampleBtn = el("button", { class: "small danger-ish", type: "button", text: "Remove" });
+      removeSampleBtn.addEventListener("click", function () {
+        panel.samples = panel.samples.filter(function (s) { return s.id !== sample.id; });
+        renderAll();
+      });
+      slotHeader.appendChild(removeSampleBtn);
+    }
+    slot.appendChild(slotHeader);
+
+    // File input
+    var fileField = el("div", { class: "field" });
+    var fileInput = el("input", { type: "file", accept: ".csv,text/csv" });
+    fileInput.addEventListener("change", function () {
+      var f = fileInput.files && fileInput.files[0];
+      if (!f) return;
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        sample.csvText = e.target.result;
+        sample.fileName = f.name;
+        if (!sample.label) sample.label = f.name.replace(/\.csv$/i, "");
+        processSample(sample);
+        renderAll();
+      };
+      reader.onerror = function () {
+        sample.error = "Couldn't read this file from your computer. Try selecting it again.";
+        sample.csvText = null;
+        renderAll();
+      };
+      reader.readAsText(f);
+    });
+    fileField.appendChild(fileInput);
+    if (sample.fileName) {
+      fileField.appendChild(el("div", { class: "detected-line mono", text: sample.fileName }));
+    }
+    slot.appendChild(fileField);
+
+    // Sample label
+    var labelField = el("div", { class: "field" });
+    labelField.appendChild(el("label", { text: "Sample label" }));
+    var labelInput = el("input", { type: "text" });
+    labelInput.value = sample.label;
+    labelInput.placeholder = "e.g. fraction A3, WT";
+    labelInput.addEventListener("input", function () {
+      sample.label = labelInput.value;
+      renderPlots();
+    });
+    labelField.appendChild(labelInput);
+    slot.appendChild(labelField);
+
+    // Overrides (collapsible)
+    var details = el("details", { class: "overrides" });
+    details.appendChild(el("summary", { text: "Column name overrides (optional)" }));
+    var overrideRow = el("div", { class: "override-row" });
+
+    function makeOverrideField(labelText, valueKey) {
+      var f = el("div");
+      f.appendChild(el("label", { text: labelText }));
+      var input = el("input", { type: "text", placeholder: "leave blank to auto-detect" });
+      input.value = sample[valueKey];
+      input.addEventListener("change", function () {
+        sample[valueKey] = input.value;
+        processSample(sample);
+        renderAll();
+      });
+      f.appendChild(input);
+      return f;
+    }
+    overrideRow.appendChild(makeOverrideField("Volume column name", "overrideVol"));
+    overrideRow.appendChild(makeOverrideField("UV column name", "overrideUV"));
+    overrideRow.appendChild(makeOverrideField("%B column name", "overrideGrad"));
+    details.appendChild(overrideRow);
+    slot.appendChild(details);
+
+    // Detected / error line
+    if (sample.error) {
+      slot.appendChild(el("div", { class: "error-line", text: sample.error }));
+    } else if (sample.detected) {
+      var d = sample.detected;
+      var txt = "Detected → volume: " + (d.vol ? "'" + d.vol + "'" : "none") +
+        ", UV: " + (d.uv ? "'" + d.uv + "'" : "none") +
+        ", gradient: " + (d.grad ? "'" + d.grad + "'" : "not found");
+      slot.appendChild(el("div", { class: "detected-line", text: txt }));
+    }
+
+    return slot;
+  }
+
+  // ---------- Rendering: plots ----------
+  function renderPlots() {
+    mainArea.innerHTML = "";
+    if (!state.panels.length) {
+      mainArea.appendChild(el("div", { class: "empty-state", text: "No panels to show yet. Add a panel and upload a file (or click \"Load demo data\") to see a plot here." }));
+      return;
+    }
+
+    var anyData = state.panels.some(function (p) {
+      return p.samples.some(function (s) { return s.parsed && s.parsed.length; });
+    });
+
+    if (!anyData) {
+      mainArea.appendChild(el("div", { class: "empty-state", text: "Nothing plotted yet. Upload a CSV export in the panel on the left, or click \"Load demo data\" to try the tool with synthetic sample data." }));
+      return;
+    }
+
+    state.panels.forEach(function (panel) {
+      mainArea.appendChild(renderPlotCard(panel));
+    });
+  }
+
+  function renderPlotCard(panel) {
+    var card = el("div", { class: "plot-card" });
+    var validSamples = panel.samples.filter(function (s) { return s.parsed && s.parsed.length; });
+
+    card.appendChild(el("h3", { text: panel.label || "Untitled panel" }));
+
+    if (!validSamples.length) {
+      card.appendChild(el("div", { class: "plot-sub", text: "No plottable samples in this panel yet." }));
+      return card;
+    }
+
+    var nPts = validSamples.reduce(function (a, s) { return a + s.parsed.length; }, 0);
+    card.appendChild(el("div", {
+      class: "plot-sub",
+      text: validSamples.length + " sample" + (validSamples.length === 1 ? "" : "s") + " overlaid · " + nPts + " total points"
+    }));
+
+    var svgWrap = el("div", { class: "svg-wrap", id: "chart-" + panel.id });
+    var chartSvg = buildChartSVG(panel, validSamples);
+    svgWrap.appendChild(chartSvg);
+    card.appendChild(svgWrap);
+
+    var chartActions = el("div", { class: "chart-actions" });
+    var savePngBtn = el("button", { type: "button", class: "small chart-save-btn", "data-target": "chart-" + panel.id, "data-format": "png", text: "Save PNG" });
+    var saveSvgBtn = el("button", { type: "button", class: "small chart-save-btn", "data-target": "chart-" + panel.id, "data-format": "svg", text: "Save SVG" });
+    savePngBtn.addEventListener("click", function () {
+      downloadChartAsPng(chartSvg, (panel.label || "chart") + "_chart");
+    });
+    saveSvgBtn.addEventListener("click", function () {
+      downloadChartAsSvg(chartSvg, (panel.label || "chart") + "_chart");
+    });
+    chartActions.appendChild(savePngBtn);
+    chartActions.appendChild(saveSvgBtn);
+    card.appendChild(chartActions);
+
+    // Swatch row (accessibility redundancy)
+    var swRow = el("div", { class: "swatch-row" });
+    validSamples.forEach(function (s, idx) {
+      var globalIdx = panel.samples.indexOf(s);
+      var colorVar = SERIES_COLORS[globalIdx % SERIES_COLORS.length];
+      var item = el("div", { class: "item" });
+      var dot = el("span", { class: "dot" });
+      dot.style.background = "var(" + colorVar + ")";
+      item.appendChild(dot);
+      item.appendChild(document.createTextNode(s.label || ("Sample " + (globalIdx + 1))));
+      swRow.appendChild(item);
+    });
+    card.appendChild(swRow);
+
+    var hasGradient = panel.showGradient && validSamples.some(function (s) { return s.detected && s.detected.grad; });
+    if (hasGradient) {
+      card.appendChild(el("div", { class: "gradient-caption", text: "— —  Buffer B gradient (%), dashed" }));
+    }
+
+    // Data table toggle
+    var toggleWrap = el("div", { class: "table-toggle" });
+    var toggleBtn = el("button", { class: "small", type: "button", text: panel.tableOpen ? "Hide data table" : "View data table" });
+    var tableWrap = el("div", { class: "table-wrap" });
+    tableWrap.style.display = panel.tableOpen ? "block" : "none";
+    tableWrap.appendChild(buildDataTable(panel, validSamples));
+    toggleBtn.addEventListener("click", function () {
+      panel.tableOpen = !panel.tableOpen;
+      toggleBtn.textContent = panel.tableOpen ? "Hide data table" : "View data table";
+      tableWrap.style.display = panel.tableOpen ? "block" : "none";
+    });
+    toggleWrap.appendChild(toggleBtn);
+    toggleWrap.appendChild(tableWrap);
+    card.appendChild(toggleWrap);
+
+    return card;
+  }
+
+  function buildDataTable(panel, validSamples) {
+    var wrapper = el("div");
+    validSamples.forEach(function (s) {
+      var globalIdx = panel.samples.indexOf(s);
+      var table = el("table", { class: "data-table" });
+      var caption = el("caption", { text: (s.label || ("Sample " + (globalIdx + 1))) + " — " + s.parsed.length + " points" });
+      table.appendChild(caption);
+      var thead = el("thead");
+      var hasGrad = s.parsed.some(function (p) { return p.grad !== null; });
+      var headRow = el("tr", null, [
+        el("th", { text: "Volume" }),
+        el("th", { text: "Norm. UV" }),
+        el("th", { text: "Raw UV" })
+      ]);
+      if (hasGrad) headRow.appendChild(el("th", { text: "%B" }));
+      thead.appendChild(headRow);
+      table.appendChild(thead);
+      var tbody = el("tbody");
+      s.parsed.forEach(function (p) {
+        var tr = el("tr", null, [
+          el("td", { text: p.volume.toFixed(3) }),
+          el("td", { text: p.normUV.toFixed(4) }),
+          el("td", { text: p.rawUV.toFixed(2) })
+        ]);
+        if (hasGrad) tr.appendChild(el("td", { text: p.grad === null ? "—" : p.grad.toFixed(1) }));
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      wrapper.appendChild(table);
+    });
+    return wrapper;
+  }
+
+  // ---------- SVG chart building ----------
+  var NS = "http://www.w3.org/2000/svg";
+  function svgEl(tag, attrs) {
+    var e = document.createElementNS(NS, tag);
+    if (attrs) {
+      Object.keys(attrs).forEach(function (k) { e.setAttribute(k, attrs[k]); });
+    }
+    return e;
+  }
+
+  function getCSSVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  function buildChartSVG(panel, validSamples) {
+    var width = 640, height = 380;
+    var margin = { top: 20, right: 62, bottom: 44, left: 54 };
+    var plotW = width - margin.left - margin.right;
+    var plotH = height - margin.top - margin.bottom;
+
+    var svg = svgEl("svg", {
+      class: "chart",
+      viewBox: "0 0 " + width + " " + height,
+      width: "100%",
+      preserveAspectRatio: "xMinYMin meet",
+      role: "img",
+      "aria-label": "Chromatogram overlay for panel " + (panel.label || "")
+    });
+
+    // Determine x domain (union of all samples' volume range)
+    var xMin = Infinity, xMax = -Infinity;
+    validSamples.forEach(function (s) {
+      s.parsed.forEach(function (p) {
+        if (p.volume < xMin) xMin = p.volume;
+        if (p.volume > xMax) xMax = p.volume;
+      });
+    });
+    xMin -= 0.5;
+    xMax += 0.5;
+    if (xMax <= xMin) xMax = xMin + 1;
+
+    var yMin = 0, yMax = 1.05;
+
+    var hasGradient = panel.showGradient && validSamples.some(function (s) { return s.detected && s.detected.grad; });
+    var gMin = 0, gMax = 105;
+
+    function xScale(v) { return margin.left + (v - xMin) / (xMax - xMin) * plotW; }
+    function yScale(v) { return margin.top + plotH - (v - yMin) / (yMax - yMin) * plotH; }
+    function gScale(v) { return margin.top + plotH - (v - gMin) / (gMax - gMin) * plotH; }
+
+    var borderColor = "var(--border)";
+    var mutedColor = "var(--muted)";
+    var inkColor = "var(--ink)";
+    var surfaceColor = "var(--surface)";
+    var gradColor = "var(--data-gradient)";
+
+    // Plot area background border
+    svg.appendChild(svgEl("rect", {
+      x: margin.left, y: margin.top, width: plotW, height: plotH,
+      fill: "none", stroke: borderColor, "stroke-width": 1
+    }));
+
+    // Gridlines + y axis ticks (primary, 0..1)
+    var yTicks = [0, 0.25, 0.5, 0.75, 1.0];
+    yTicks.forEach(function (t) {
+      var y = yScale(t);
+      svg.appendChild(svgEl("line", {
+        x1: margin.left, x2: margin.left + plotW, y1: y, y2: y,
+        stroke: borderColor, "stroke-width": 1, "stroke-dasharray": "2,3"
+      }));
+      var lbl = svgEl("text", {
+        x: margin.left - 8, y: y + 3, "text-anchor": "end",
+        "font-size": "10.5", fill: mutedColor, "font-family": "'IBM Plex Mono', monospace"
+      });
+      lbl.textContent = t.toFixed(2);
+      svg.appendChild(lbl);
+    });
+
+    // x axis ticks
+    var xTickCount = 6;
+    for (var i = 0; i <= xTickCount; i++) {
+      var xv = xMin + (xMax - xMin) * (i / xTickCount);
+      var x = xScale(xv);
+      svg.appendChild(svgEl("line", {
+        x1: x, x2: x, y1: margin.top + plotH, y2: margin.top + plotH + 4,
+        stroke: mutedColor, "stroke-width": 1
+      }));
+      var xl = svgEl("text", {
+        x: x, y: margin.top + plotH + 16, "text-anchor": "middle",
+        "font-size": "10.5", fill: mutedColor, "font-family": "'IBM Plex Mono', monospace"
+      });
+      xl.textContent = xv.toFixed(1);
+      svg.appendChild(xl);
+    }
+
+    // Axis titles
+    var xTitle = svgEl("text", {
+      x: margin.left + plotW / 2, y: height - 6, "text-anchor": "middle",
+      "font-size": "12", fill: inkColor, "font-weight": "500"
+    });
+    xTitle.textContent = "Volume";
+    svg.appendChild(xTitle);
+
+    var yTitle = svgEl("text", {
+      x: -(margin.top + plotH / 2), y: 14, "text-anchor": "middle",
+      "font-size": "12", fill: inkColor, "font-weight": "500",
+      transform: "rotate(-90)"
+    });
+    yTitle.textContent = "Norm. UV";
+    svg.appendChild(yTitle);
+
+    // Secondary axis (gradient)
+    if (hasGradient) {
+      var gTicks = [0, 25, 50, 75, 100];
+      gTicks.forEach(function (t) {
+        var y = gScale(t);
+        var lbl = svgEl("text", {
+          x: margin.left + plotW + 8, y: y + 3, "text-anchor": "start",
+          "font-size": "10.5", fill: gradColor, "font-family": "'IBM Plex Mono', monospace"
+        });
+        lbl.textContent = t;
+        svg.appendChild(lbl);
+        svg.appendChild(svgEl("line", {
+          x1: margin.left + plotW, x2: margin.left + plotW + 4, y1: y, y2: y,
+          stroke: gradColor, "stroke-width": 1
+        }));
+      });
+      var gTitle = svgEl("text", {
+        x: (margin.top + plotH / 2) * -1, y: width - 10, "text-anchor": "middle",
+        "font-size": "12", fill: gradColor, "font-weight": "500",
+        transform: "rotate(-90)"
+      });
+      gTitle.textContent = "Buffer B (%)";
+      svg.appendChild(gTitle);
+    }
+
+    // Gradient traces (draw first, underneath UV lines)
+    if (hasGradient) {
+      validSamples.forEach(function (s) {
+        if (!s.detected || !s.detected.grad) return;
+        var pts = s.parsed.filter(function (p) { return p.grad !== null; });
+        if (pts.length < 2) return;
+        var d = pointsToPath(pts, function (p) { return xScale(p.volume); }, function (p) { return gScale(p.grad); });
+        svg.appendChild(svgEl("path", {
+          d: d, fill: "none", stroke: gradColor, "stroke-width": 1.75,
+          "stroke-dasharray": "5,4", opacity: "0.85"
+        }));
+      });
+    }
+
+    // UV traces
+    validSamples.forEach(function (s) {
+      var globalIdx = panel.samples.indexOf(s);
+      var colorVar = SERIES_COLORS[globalIdx % SERIES_COLORS.length];
+      var color = "var(" + colorVar + ")";
+      var pts = s.parsed;
+      if (pts.length < 2) return;
+      var d = pointsToPath(pts, function (p) { return xScale(p.volume); }, function (p) { return yScale(p.normUV); });
+      svg.appendChild(svgEl("path", {
+        d: d, fill: "none", stroke: color, "stroke-width": 3,
+        "stroke-linejoin": "round", "stroke-linecap": "round"
+      }));
+
+      // inline label near line end, white/surface halo
+      var last = pts[pts.length - 1];
+      var lx = xScale(last.volume);
+      var ly = yScale(last.normUV);
+      var labelText = s.label || ("Sample " + (globalIdx + 1));
+      // clamp label x so it doesn't overflow plot
+      var anchor = "end";
+      var tx = lx - 6;
+      if (tx < margin.left + 40) { anchor = "start"; tx = lx + 6; }
+
+      var haloText = svgEl("text", {
+        x: tx, y: ly - 6, "text-anchor": anchor,
+        "font-size": "11", "font-weight": "600",
+        stroke: surfaceColor, "stroke-width": "3", "paint-order": "stroke",
+        fill: color
+      });
+      haloText.textContent = labelText;
+      svg.appendChild(haloText);
+    });
+
+    return svg;
+  }
+
+  function pointsToPath(pts, xf, yf) {
+    var d = "";
+    pts.forEach(function (p, i) {
+      var x = xf(p), y = yf(p);
+      d += (i === 0 ? "M" : "L") + x.toFixed(2) + "," + y.toFixed(2) + " ";
+    });
+    return d.trim();
+  }
+
+  // ============================================================
+  // Save chart as PNG / SVG
+  // ============================================================
+  function downloadChartAsSvg(svgEl, baseName){ window.LabFigure.downloadSvg(svgEl, baseName); }
+  function downloadChartAsPng(svgEl, baseName){ window.LabFigure.downloadPng(svgEl, baseName); }
+
+  // ---------- Top-level render ----------
+  function renderAll() {
+    renderControls();
+    renderPlots();
+  }
+
+  // Init with one panel
+  state.panels.push(makePanel());
+  renderAll();
+
+})();
+</script>
+</body>
+</html>

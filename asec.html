@@ -1,0 +1,1100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Analytical SEC Plotter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink: #16211f;
+    --surface: #ffffff;
+    --surface-alt: #f2f5f4;
+    --border: #dbe3e1;
+    --muted: #5c6d69;
+    --accent: #009988;
+    --accent-ink: #ffffff;
+    --data-teal: #009988;
+    --data-orange: #E69F00;
+    --data-pink: #BB5566;
+    --data-blue: #004488;
+    --data-brown: #994F00;
+    --data-dimer: #BB5566;
+    --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]) {
+      --ink: #e7efed;
+      --surface: #141c1b;
+      --surface-alt: #1b2725;
+      --border: #2c3936;
+      --muted: #9fb0ac;
+      --accent: #2bcdb8;
+      --accent-ink: #06201c;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ink: #e7efed;
+    --surface: #141c1b;
+    --surface-alt: #1b2725;
+    --border: #2c3936;
+    --muted: #9fb0ac;
+    --accent: #2bcdb8;
+    --accent-ink: #06201c;
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--surface);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    line-height: 1.4;
+  }
+
+  header.app-header{
+    border-bottom: 1px solid var(--border);
+    padding: 14px 22px;
+    display:flex;
+    align-items:baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+    background: var(--surface);
+  }
+  header.app-header h1{
+    font-size: 1.05rem;
+    margin: 0;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+  header.app-header p{
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+
+  main.layout{
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 20px;
+    padding: 20px;
+    align-items: start;
+  }
+  @media (max-width: 900px){
+    main.layout{ grid-template-columns: 1fr; }
+  }
+
+  #controls{
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  #controls > .top-actions{
+    display:flex;
+    justify-content: flex-end;
+  }
+
+  .panel-controls{
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .panel-controls .panel-controls-head{
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .panel-controls .panel-controls-head h2{
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin:0;
+    font-weight: 600;
+  }
+
+  label.field{
+    display:flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.82rem;
+  }
+  label.field span.field-label{
+    font-weight: 500;
+    color: var(--ink);
+  }
+  label.checkbox-field{
+    display:flex;
+    align-items:center;
+    gap: 7px;
+    font-size: 0.82rem;
+    cursor: pointer;
+  }
+  label.checkbox-field input{ width:auto; }
+
+  input[type="text"], input[type="number"], select{
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 8px;
+    width: 100%;
+  }
+  label.field.numeric-field input,
+  input[type="number"]{
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+  input[type="file"]{
+    font-family: var(--font-sans);
+    font-size: 0.78rem;
+    color: var(--ink);
+    width: 100%;
+  }
+  input:focus, select:focus, button:focus, details summary:focus{
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  .two-col{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  button{
+    font-family: var(--font-sans);
+    font-size: 0.82rem;
+    font-weight: 600;
+    border-radius: 6px;
+    padding: 8px 12px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--ink);
+  }
+  button.primary{
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-ink);
+  }
+  button.small{
+    padding: 4px 9px;
+    font-size: 0.74rem;
+  }
+  button:hover{ filter: brightness(0.96); }
+  button.danger-text{ color: var(--data-pink); }
+
+  .sample-row{
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 10px;
+    display:flex;
+    flex-direction: column;
+    gap: 7px;
+    background: var(--surface-alt);
+  }
+  .sample-row .sample-row-head{
+    display:flex;
+    justify-content: space-between;
+    align-items:center;
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .sample-row input[type="text"], .sample-row input[type="number"]{
+    font-family: var(--font-mono);
+  }
+
+  .file-status{
+    font-size: 0.74rem;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    word-break: break-all;
+  }
+  .field-error{
+    font-size: 0.74rem;
+    color: var(--data-pink);
+    display:flex;
+    gap: 5px;
+    align-items:flex-start;
+  }
+
+  .calibration-sub{
+    border-top: 1px dashed var(--border);
+    padding-top: 8px;
+    display:flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  hr.divider{
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2px 0;
+  }
+
+  #plots{
+    display:flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: flex-start;
+  }
+  .panel-card{
+    flex: 1 1 480px;
+    min-width: 320px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .panel-card h3{
+    margin: 0 0 10px 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+  }
+  .panel-card svg{
+    width: 100%;
+    height: auto;
+    aspect-ratio: 620 / 400;
+    display: block;
+  }
+  .chart-actions{ display:flex; gap:6px; margin-top:6px; }
+
+  .empty-state{
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  .swatch-row{
+    display:flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 12px;
+    font-size: 0.78rem;
+    font-family: var(--font-mono);
+  }
+  .swatch-item{
+    display:flex;
+    align-items:center;
+    gap: 6px;
+  }
+  .swatch-dot{
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  details.data-table-toggle{
+    margin-top: 12px;
+    border-top: 1px solid var(--border);
+    padding-top: 8px;
+  }
+  details.data-table-toggle summary{
+    cursor: pointer;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--accent);
+    user-select: none;
+  }
+  .table-wrap{
+    overflow-x: auto;
+    max-height: 320px;
+    overflow-y: auto;
+    margin-top: 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  table.data-table{
+    border-collapse: collapse;
+    width: 100%;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.76rem;
+  }
+  table.data-table th, table.data-table td{
+    padding: 4px 8px;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  table.data-table th:first-child, table.data-table td:first-child{
+    text-align: left;
+  }
+  table.data-table thead th{
+    position: sticky;
+    top: 0;
+    background: var(--surface-alt);
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .muted-note{
+    color: var(--muted);
+    font-size: 0.76rem;
+  }
+</style>
+<script src="figure-export.js" data-tool="aSEC"></script>
+</head>
+<body>
+
+<header class="app-header">
+  <h1>Analytical SEC Plotter</h1>
+  <p>Overlay analytical size-exclusion chromatography traces.</p>
+</header>
+
+<main class="layout">
+  <aside id="controls"></aside>
+  <section id="plots"></section>
+</main>
+
+<script>
+(function(){
+  'use strict';
+
+  // ---------- utilities ----------
+  function clamp(v, lo, hi){
+    if(lo > hi){ const t=lo; lo=hi; hi=t; }
+    return Math.min(Math.max(v, lo), hi);
+  }
+  function mean(arr){ return arr.reduce((a,b)=>a+b,0) / arr.length; }
+  function escapeHtml(str){
+    return String(str==null?'':str).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+  function fmt(x, d){
+    if(x===null || x===undefined || Number.isNaN(x)) return '—';
+    return Number(x).toFixed(d===undefined?2:d);
+  }
+  function svgEl(tag, attrs, children){
+    const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    if(attrs){
+      for(const k in attrs){
+        if(attrs[k]!==undefined && attrs[k]!==null) el.setAttribute(k, attrs[k]);
+      }
+    }
+    if(children){
+      children.forEach(function(c){ if(c) el.appendChild(c); });
+    }
+    return el;
+  }
+
+  const SERIES_COLORS = ['var(--data-teal)','var(--data-orange)','var(--data-pink)','var(--data-blue)','var(--data-brown)'];
+  function colorFor(i){ return SERIES_COLORS[i % SERIES_COLORS.length]; }
+
+  // "nice" axis tick helper
+  function niceNum(range, round){
+    if(range <= 0) return 1;
+    const exponent = Math.floor(Math.log10(range));
+    const fraction = range / Math.pow(10, exponent);
+    let niceFraction;
+    if(round){
+      if(fraction < 1.5) niceFraction = 1;
+      else if(fraction < 3) niceFraction = 2;
+      else if(fraction < 7) niceFraction = 5;
+      else niceFraction = 10;
+    } else {
+      if(fraction <= 1) niceFraction = 1;
+      else if(fraction <= 2) niceFraction = 2;
+      else if(fraction <= 5) niceFraction = 5;
+      else niceFraction = 10;
+    }
+    return niceFraction * Math.pow(10, exponent);
+  }
+  function niceTicks(min, max, count){
+    if(min === max){ min -= 1; max += 1; }
+    const range = niceNum(max - min, false);
+    const step = niceNum(range / Math.max(count - 1, 1), true);
+    const niceMin = Math.floor(min / step) * step;
+    const niceMax = Math.ceil(max / step) * step;
+    const ticks = [];
+    for(let v = niceMin; v <= niceMax + step * 0.5; v += step){
+      ticks.push(Math.round(v / step * 1e6) / 1e6);
+    }
+    return ticks;
+  }
+
+  // ---------- parsing ----------
+  // Raw .asc trace: tab-separated, skip first 3 header lines, first two
+  // tab-separated fields per remaining line are mL and mAU, drop the
+  // trailing (incomplete) final line.
+  function parseAscText(text){
+    const lines = text.split(/\r\n|\r|\n/);
+    if(lines.length <= 4){
+      throw new Error('This file is too short to be a raw .asc trace export (expected a 3-line header plus data rows).');
+    }
+    const body = lines.slice(3, -1);
+    const points = [];
+    for(let i=0;i<body.length;i++){
+      const line = body[i];
+      if(!line || !line.trim()) continue;
+      const parts = line.split('\t');
+      if(parts.length < 2) continue;
+      const mLv = parseFloat(parts[0]);
+      const mAUv = parseFloat(parts[1]);
+      if(Number.isNaN(mLv) || Number.isNaN(mAUv)) continue;
+      points.push({ mL: mLv, mAU: mAUv });
+    }
+    if(points.length === 0){
+      throw new Error('No numeric mL / mAU rows found. Is this an unedited .asc export from Unicorn?');
+    }
+    points.sort(function(a,b){ return a.mL - b.mL; });
+    let minA = Infinity, maxA = -Infinity;
+    points.forEach(function(p){ if(p.mAU < minA) minA = p.mAU; if(p.mAU > maxA) maxA = p.mAU; });
+    const span = maxA - minA;
+    points.forEach(function(p){ p.norm = span === 0 ? 0 : (p.mAU - minA) / span; });
+    return points;
+  }
+
+  // Calibration CSV: columns Mr, Kav, log_Mr (any order, matched by header name).
+  function parseCalibrationCsv(text){
+    const lines = text.split(/\r\n|\r|\n/).filter(function(l){ return l.trim() !== ''; });
+    if(lines.length < 2){
+      throw new Error('This calibration file has no data rows.');
+    }
+    const header = lines[0].split(',').map(function(h){ return h.trim().toLowerCase(); });
+    let iMr = header.indexOf('mr');
+    let iKav = header.indexOf('kav');
+    let iLog = header.indexOf('log_mr');
+    if(iMr === -1 || iKav === -1 || iLog === -1){
+      // fall back to positional Mr,Kav,log_Mr
+      iMr = 0; iKav = 1; iLog = 2;
+    }
+    const rows = [];
+    for(let i=1;i<lines.length;i++){
+      const parts = lines[i].split(',');
+      if(parts.length <= Math.max(iMr, iKav, iLog)) continue;
+      const Mr = parseFloat(parts[iMr]);
+      const Kav = parseFloat(parts[iKav]);
+      const log_Mr = parseFloat(parts[iLog]);
+      if(Number.isNaN(Mr) || Number.isNaN(Kav) || Number.isNaN(log_Mr)) continue;
+      rows.push({ Mr: Mr, Kav: Kav, log_Mr: log_Mr });
+    }
+    if(rows.length === 0){
+      throw new Error('Could not read any Mr / Kav / log_Mr rows from this calibration CSV.');
+    }
+    return rows;
+  }
+
+  // Fit ordinary least squares log_Mr ~ Kav, filtered by column MW range.
+  function computeFit(rawRows, columnType){
+    const filtered = rawRows.filter(function(r){
+      if(columnType === 'aSEC_75') return r.Mr > 1000 && r.Mr < 70000;
+      return r.Mr > 5000 && r.Mr < 600000; // aSEC_200
+    });
+    if(filtered.length < 2){
+      return { error: 'Not enough calibration standards fall inside the expected MW range for this column type (' + filtered.length + ' point(s) found).' };
+    }
+    const kavs = filtered.map(function(r){ return r.Kav; });
+    const logs = filtered.map(function(r){ return r.log_Mr; });
+    const n = filtered.length;
+    const kavMean = mean(kavs);
+    const logMean = mean(logs);
+    let Sxy = 0, Sxx = 0;
+    for(let i=0;i<n;i++){
+      Sxy += (kavs[i]-kavMean) * (logs[i]-logMean);
+      Sxx += (kavs[i]-kavMean) * (kavs[i]-kavMean);
+    }
+    if(Sxx === 0){
+      return { error: 'Calibration Kav values have no spread — cannot fit a line.' };
+    }
+    const slope = Sxy / Sxx;
+    const intercept = logMean - slope * kavMean;
+    let SSE = 0;
+    for(let i=0;i<n;i++){
+      const pred = intercept + slope * kavs[i];
+      SSE += (logs[i]-pred) * (logs[i]-pred);
+    }
+    const s = n > 2 ? Math.sqrt(SSE / (n-2)) : 0;
+    return {
+      slope: slope, intercept: intercept, n: n, kavMean: kavMean, Sxx: Sxx, s: s,
+      kavMin: Math.min.apply(null, kavs), kavMax: Math.max.apply(null, kavs),
+      logMin: Math.min.apply(null, logs), logMax: Math.max.apply(null, logs)
+    };
+  }
+
+  // Predict elution volume (and, if enough points, a ~95% window) for a given MW.
+  const V0 = 8, VT = 24; // analytical column geometry
+  function predictElution(fit, mw){
+    if(!fit || fit.error || !mw || mw <= 0 || !Number.isFinite(mw)) return null;
+    const logMr = clamp(Math.log10(mw), fit.logMin, fit.logMax);
+    const kav = clamp((logMr - fit.intercept) / fit.slope, fit.kavMin, fit.kavMax);
+    const elution = clamp(kav * (VT - V0) + V0, V0, VT);
+    let lo = null, hi = null;
+    if(fit.n > 2 && fit.s > 0 && fit.Sxx > 0){
+      const t = 1.96;
+      const half = t * fit.s * Math.sqrt(1 + 1/fit.n + Math.pow(kav - fit.kavMean, 2) / fit.Sxx);
+      const logLo = logMr - half, logHi = logMr + half;
+      const kA = (logLo - fit.intercept) / fit.slope;
+      const kB = (logHi - fit.intercept) / fit.slope;
+      let kavLo = Math.min(kA, kB), kavHi = Math.max(kA, kB);
+      kavLo = clamp(kavLo, fit.kavMin, fit.kavMax);
+      kavHi = clamp(kavHi, fit.kavMin, fit.kavMax);
+      lo = clamp(kavLo * (VT - V0) + V0, V0, VT);
+      hi = clamp(kavHi * (VT - V0) + V0, V0, VT);
+      if(lo > hi){ const tmp = lo; lo = hi; hi = tmp; }
+    }
+    return { elution: elution, lo: lo, hi: hi };
+  }
+
+  // ---------- state ----------
+  let panelCounter = 0;
+  let sampleCounter = 0;
+
+  function makeSample(){
+    sampleCounter += 1;
+    return {
+      id: 'smp' + sampleCounter,
+      fileName: null,
+      points: null,
+      error: null,
+      label: '',
+      mw: ''
+    };
+  }
+
+  function makePanel(){
+    panelCounter += 1;
+    return {
+      id: 'pnl' + panelCounter,
+      label: 'Panel ' + panelCounter,
+      columnType: 'aSEC_200',
+      calibration: {
+        enabled: false,
+        fileName: null,
+        rawRows: null,
+        error: null,
+        showDimer: true
+      },
+      samples: [makeSample(), makeSample(), makeSample()],
+      xMin: '',
+      xMax: '',
+      showTable: false
+    };
+  }
+
+  const state = { panels: [ makePanel() ] };
+
+  function findPanel(id){ return state.panels.find(function(p){ return p.id === id; }); }
+  function findSample(panel, id){ return panel.samples.find(function(s){ return s.id === id; }); }
+
+  // ---------- controls rendering ----------
+  const controlsEl = document.getElementById('controls');
+  const plotsEl = document.getElementById('plots');
+
+  function renderControls(){
+    let html = '<div class="top-actions"><button type="button" class="primary" data-action="addPanel">+ Add panel</button></div>';
+    state.panels.forEach(function(panel, pIdx){
+      html += renderPanelControls(panel, pIdx);
+    });
+    controlsEl.innerHTML = html;
+  }
+
+  function renderPanelControls(panel, pIdx){
+    const removeBtn = state.panels.length > 1
+      ? '<button type="button" class="small danger-text" data-action="removePanel" data-panel="'+panel.id+'">Remove panel</button>'
+      : '';
+    let html = '<div class="panel-controls" data-panel-block="'+panel.id+'">';
+    html += '<div class="panel-controls-head"><h2>Panel '+(pIdx+1)+'</h2>'+removeBtn+'</div>';
+
+    html += '<label class="field"><span class="field-label">Panel label</span>'+
+      '<input type="text" data-field="label" data-panel="'+panel.id+'" value="'+escapeHtml(panel.label)+'" placeholder="e.g. apCCDi_008"></label>';
+
+    html += '<label class="field"><span class="field-label">Column type</span>'+
+      '<select data-field="columnType" data-panel="'+panel.id+'">'+
+      '<option value="aSEC_200"'+(panel.columnType==='aSEC_200'?' selected':'')+'>aSEC_200</option>'+
+      '<option value="aSEC_75"'+(panel.columnType==='aSEC_75'?' selected':'')+'>aSEC_75</option>'+
+      '</select></label>';
+
+    html += '<hr class="divider">';
+
+    html += '<label class="checkbox-field"><input type="checkbox" data-field="calEnabled" data-panel="'+panel.id+'"'+(panel.calibration.enabled?' checked':'')+'> Show predicted monomer/dimer window</label>';
+
+    if(panel.calibration.enabled){
+      html += '<div class="calibration-sub">';
+      html += '<label class="field"><span class="field-label">Calibration CSV (Mr, Kav, log_Mr)</span>'+
+        '<input type="file" accept=".csv,text/csv" data-field="calFile" data-panel="'+panel.id+'"></label>';
+      if(panel.calibration.fileName && !panel.calibration.error){
+        html += '<div class="file-status">Loaded: '+escapeHtml(panel.calibration.fileName)+'</div>';
+      }
+      if(panel.calibration.error){
+        html += '<div class="field-error">⚠ '+escapeHtml(panel.calibration.error)+'</div>';
+      }
+      html += '<label class="checkbox-field"><input type="checkbox" data-field="calShowDimer" data-panel="'+panel.id+'"'+(panel.calibration.showDimer?' checked':'')+'> Show dimer too</label>';
+      html += '</div>';
+    }
+
+    html += '<hr class="divider">';
+    html += '<div><span class="field-label" style="font-size:0.82rem;">Sample overlay files</span></div>';
+
+    panel.samples.forEach(function(sample, sIdx){
+      html += renderSampleRow(panel, sample, sIdx);
+    });
+
+    html += '<button type="button" data-action="addSample" data-panel="'+panel.id+'">+ Add another sample</button>';
+
+    html += '<hr class="divider">';
+    html += '<div class="two-col">';
+    html += '<label class="field numeric-field"><span class="field-label">X min (mL)</span>'+
+      '<input type="number" step="0.1" data-field="xMin" data-panel="'+panel.id+'" value="'+escapeHtml(panel.xMin)+'" placeholder="auto"></label>';
+    html += '<label class="field numeric-field"><span class="field-label">X max (mL)</span>'+
+      '<input type="number" step="0.1" data-field="xMax" data-panel="'+panel.id+'" value="'+escapeHtml(panel.xMax)+'" placeholder="auto"></label>';
+    html += '</div>';
+
+    html += '</div>';
+    return html;
+  }
+
+  function renderSampleRow(panel, sample, sIdx){
+    const canRemove = panel.samples.length > 3;
+    let html = '<div class="sample-row" data-sample-block="'+sample.id+'">';
+    html += '<div class="sample-row-head"><span>Sample '+(sIdx+1)+'</span>'+
+      (canRemove ? '<button type="button" class="small danger-text" data-action="removeSample" data-panel="'+panel.id+'" data-sample="'+sample.id+'">Remove</button>' : '')+
+      '</div>';
+    html += '<input type="file" accept=".asc,text/plain" data-field="sampleFile" data-panel="'+panel.id+'" data-sample="'+sample.id+'">';
+    if(sample.fileName && !sample.error){
+      html += '<div class="file-status">Loaded: '+escapeHtml(sample.fileName)+' ('+sample.points.length+' pts)</div>';
+    }
+    if(sample.error){
+      html += '<div class="field-error">⚠ '+escapeHtml(sample.error)+'</div>';
+    }
+    html += '<input type="text" placeholder="Sample label" data-field="sampleLabel" data-panel="'+panel.id+'" data-sample="'+sample.id+'" value="'+escapeHtml(sample.label)+'">';
+    html += '<label class="field numeric-field" style="gap:2px;"><span class="field-label" style="font-size:0.72rem;">MW (g/mol) — used for calibration window</span>'+
+      '<input type="number" step="any" min="0" data-field="sampleMw" data-panel="'+panel.id+'" data-sample="'+sample.id+'" value="'+escapeHtml(sample.mw)+'"></label>';
+    html += '</div>';
+    return html;
+  }
+
+  // ---------- event delegation ----------
+  controlsEl.addEventListener('input', function(e){
+    const t = e.target;
+    const field = t.dataset.field;
+    if(!field) return;
+    const panel = findPanel(t.dataset.panel);
+    if(!panel) return;
+    if(field === 'label'){ panel.label = t.value; renderPlots(); return; }
+    if(field === 'xMin'){ panel.xMin = t.value; renderPlots(); return; }
+    if(field === 'xMax'){ panel.xMax = t.value; renderPlots(); return; }
+    if(field === 'sampleLabel' || field === 'sampleMw'){
+      const sample = findSample(panel, t.dataset.sample);
+      if(!sample) return;
+      if(field === 'sampleLabel') sample.label = t.value;
+      if(field === 'sampleMw') sample.mw = t.value;
+      renderPlots();
+      return;
+    }
+  });
+
+  controlsEl.addEventListener('change', function(e){
+    const t = e.target;
+    const field = t.dataset.field;
+    if(!field) return;
+    const panel = findPanel(t.dataset.panel);
+    if(!panel) return;
+
+    if(field === 'columnType'){
+      panel.columnType = t.value;
+      renderPlots();
+      return;
+    }
+    if(field === 'calEnabled'){
+      panel.calibration.enabled = t.checked;
+      renderControls();
+      renderPlots();
+      return;
+    }
+    if(field === 'calShowDimer'){
+      panel.calibration.showDimer = t.checked;
+      renderPlots();
+      return;
+    }
+    if(field === 'calFile'){
+      const file = t.files && t.files[0];
+      if(!file){ return; }
+      panel.calibration.fileName = file.name;
+      panel.calibration.error = null;
+      panel.calibration.rawRows = null;
+      const reader = new FileReader();
+      reader.onload = function(){
+        try{
+          panel.calibration.rawRows = parseCalibrationCsv(String(reader.result));
+          panel.calibration.error = null;
+        } catch(err){
+          panel.calibration.rawRows = null;
+          panel.calibration.error = err.message || 'Could not read this calibration file.';
+        }
+        renderControls();
+        renderPlots();
+      };
+      reader.onerror = function(){
+        panel.calibration.rawRows = null;
+        panel.calibration.error = 'Could not read this file from disk.';
+        renderControls();
+        renderPlots();
+      };
+      reader.readAsText(file);
+      return;
+    }
+    if(field === 'sampleFile'){
+      const sample = findSample(panel, t.dataset.sample);
+      if(!sample) return;
+      const file = t.files && t.files[0];
+      if(!file) return;
+      sample.fileName = file.name;
+      sample.error = null;
+      sample.points = null;
+      const reader = new FileReader();
+      reader.onload = function(){
+        try{
+          sample.points = parseAscText(String(reader.result));
+          sample.error = null;
+        } catch(err){
+          sample.points = null;
+          sample.error = err.message || 'Could not parse this trace file.';
+        }
+        renderControls();
+        renderPlots();
+      };
+      reader.onerror = function(){
+        sample.points = null;
+        sample.error = 'Could not read this file from disk.';
+        renderControls();
+        renderPlots();
+      };
+      reader.readAsText(file);
+      return;
+    }
+  });
+
+  controlsEl.addEventListener('click', function(e){
+    const btn = e.target.closest('button[data-action]');
+    if(!btn) return;
+    const action = btn.dataset.action;
+    if(action === 'addPanel'){
+      state.panels.push(makePanel());
+      renderControls();
+      renderPlots();
+      return;
+    }
+    if(action === 'removePanel'){
+      state.panels = state.panels.filter(function(p){ return p.id !== btn.dataset.panel; });
+      renderControls();
+      renderPlots();
+      return;
+    }
+    if(action === 'addSample'){
+      const panel = findPanel(btn.dataset.panel);
+      if(!panel) return;
+      panel.samples.push(makeSample());
+      renderControls();
+      renderPlots();
+      return;
+    }
+    if(action === 'removeSample'){
+      const panel = findPanel(btn.dataset.panel);
+      if(!panel) return;
+      panel.samples = panel.samples.filter(function(s){ return s.id !== btn.dataset.sample; });
+      renderControls();
+      renderPlots();
+      return;
+    }
+  });
+
+  plotsEl.addEventListener('click', function(e){
+    const saveBtn = e.target.closest('.chart-save-btn');
+    if(!saveBtn) return;
+    const targetId = saveBtn.dataset.target;
+    const container = document.getElementById(targetId);
+    const svgNode = container ? container.querySelector('svg') : null;
+    if(!svgNode) return;
+    const card = saveBtn.closest('.panel-card');
+    const h3El = card ? card.querySelector('h3') : null;
+    const labelVal = h3El ? h3El.textContent : 'chart';
+    const base = labelVal + '_chart';
+    if(saveBtn.dataset.format === 'png') downloadChartAsPng(svgNode, base);
+    else downloadChartAsSvg(svgNode, base);
+    return;
+  });
+
+  // ---------- plot rendering ----------
+  function renderPlots(){
+    plotsEl.innerHTML = '';
+    state.panels.forEach(function(panel, idx){
+      plotsEl.appendChild(renderPanelCard(panel, idx));
+    });
+  }
+
+  function renderPanelCard(panel, pIdx){
+    const card = document.createElement('div');
+    card.className = 'panel-card';
+
+    const h3 = document.createElement('h3');
+    h3.textContent = panel.label || ('Panel ' + (pIdx+1));
+    card.appendChild(h3);
+
+    const validSamples = panel.samples.filter(function(s){ return s.points && !s.error; });
+
+    if(validSamples.length === 0){
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      empty.textContent = 'No traces loaded yet. Choose one or more sample .asc files on the left to see them plotted here.';
+      card.appendChild(empty);
+      return card;
+    }
+
+    const chartData = buildChart(panel, validSamples);
+    const chartContainer = document.createElement('div');
+    chartContainer.className = 'chart-container';
+    chartContainer.id = 'chart-' + panel.id;
+    chartContainer.appendChild(chartData.svg);
+    card.appendChild(chartContainer);
+
+    const chartActions = document.createElement('div');
+    chartActions.className = 'chart-actions';
+    chartActions.innerHTML = '<button type="button" class="small chart-save-btn" data-target="'+chartContainer.id+'" data-format="png">Save PNG</button><button type="button" class="small chart-save-btn" data-target="'+chartContainer.id+'" data-format="svg">Save SVG</button>';
+    card.appendChild(chartActions);
+
+    // swatch row
+    const swatchRow = document.createElement('div');
+    swatchRow.className = 'swatch-row';
+    validSamples.forEach(function(s, i){
+      const item = document.createElement('div');
+      item.className = 'swatch-item';
+      const dot = document.createElement('span');
+      dot.className = 'swatch-dot';
+      dot.style.background = colorFor(i);
+      const label = document.createElement('span');
+      label.textContent = s.label || ('Sample ' + (i+1));
+      item.appendChild(dot);
+      item.appendChild(label);
+      swatchRow.appendChild(item);
+    });
+    card.appendChild(swatchRow);
+
+    // data table toggle
+    const details = document.createElement('details');
+    details.className = 'data-table-toggle';
+    if(panel.showTable) details.setAttribute('open','');
+    details.addEventListener('toggle', function(){ panel.showTable = details.open; });
+    const summary = document.createElement('summary');
+    summary.textContent = 'View data table';
+    details.appendChild(summary);
+
+    const tableWrap = document.createElement('div');
+    tableWrap.className = 'table-wrap';
+    const table = document.createElement('table');
+    table.className = 'data-table';
+    const thead = document.createElement('thead');
+    thead.innerHTML = '<tr><th>Sample</th><th>mL</th><th>Norm. Abs.</th></tr>';
+    table.appendChild(thead);
+    const tbody = document.createElement('tbody');
+    validSamples.forEach(function(s, i){
+      const label = s.label || ('Sample ' + (i+1));
+      s.points.forEach(function(p){
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td>'+escapeHtml(label)+'</td><td>'+fmt(p.mL,3)+'</td><td>'+fmt(p.norm,4)+'</td>';
+        tbody.appendChild(tr);
+      });
+    });
+    table.appendChild(tbody);
+    tableWrap.appendChild(table);
+    details.appendChild(tableWrap);
+    card.appendChild(details);
+
+    return card;
+  }
+
+  function buildChart(panel, validSamples){
+    const W = 620, H = 400;
+    const marginL = 58, marginR = 24, marginT = 20, marginB = 46;
+    const pw = W - marginL - marginR;
+    const ph = H - marginT - marginB;
+
+    // x domain
+    let xMin, xMax;
+    const userMin = parseFloat(panel.xMin);
+    const userMax = parseFloat(panel.xMax);
+    if(!Number.isNaN(userMin) && !Number.isNaN(userMax) && userMin < userMax){
+      xMin = userMin; xMax = userMax;
+    } else {
+      let dmin = Infinity, dmax = -Infinity;
+      validSamples.forEach(function(s){
+        s.points.forEach(function(p){
+          if(p.mL < dmin) dmin = p.mL;
+          if(p.mL > dmax) dmax = p.mL;
+        });
+      });
+      if(dmin === dmax){ dmin -= 1; dmax += 1; }
+      xMin = dmin - 1;
+      xMax = dmax + 1;
+    }
+    const yMin = 0, yMax = 1.05;
+
+    function sx(v){ return marginL + (v - xMin) / (xMax - xMin) * pw; }
+    function sy(v){ return marginT + ph - (v - yMin) / (yMax - yMin) * ph; }
+
+    const svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': 'Chromatogram plot' });
+
+    const clipId = 'clip-' + panel.id;
+    const defs = svgEl('defs', {}, [
+      svgEl('clipPath', { id: clipId }, [ svgEl('rect', { x: marginL, y: marginT, width: pw, height: ph }) ])
+    ]);
+    svg.appendChild(defs);
+
+    // gridlines + y ticks
+    const yTicks = [0, 0.25, 0.5, 0.75, 1.0];
+    yTicks.forEach(function(v){
+      const yy = sy(v);
+      svg.appendChild(svgEl('line', { x1: marginL, x2: marginL+pw, y1: yy, y2: yy, stroke: 'var(--border)', 'stroke-width': 1 }));
+      const t = svgEl('text', { x: marginL - 8, y: yy + 3, 'text-anchor': 'end', 'font-size': 10, fill: 'var(--muted)', 'font-family': 'var(--font-mono)' });
+      t.textContent = v.toFixed(2);
+      svg.appendChild(t);
+    });
+
+    // x ticks
+    const xTicks = niceTicks(xMin, xMax, 6).filter(function(v){ return v >= xMin - 1e-9 && v <= xMax + 1e-9; });
+    xTicks.forEach(function(v){
+      const xx = sx(v);
+      svg.appendChild(svgEl('line', { x1: xx, x2: xx, y1: marginT, y2: marginT+ph, stroke: 'var(--border)', 'stroke-width': 1, opacity: 0.6 }));
+      const t = svgEl('text', { x: xx, y: marginT + ph + 16, 'text-anchor': 'middle', 'font-size': 10, fill: 'var(--muted)', 'font-family': 'var(--font-mono)' });
+      t.textContent = (Math.round(v*100)/100).toString();
+      svg.appendChild(t);
+    });
+
+    // axes
+    svg.appendChild(svgEl('line', { x1: marginL, x2: marginL, y1: marginT, y2: marginT+ph, stroke: 'var(--ink)', 'stroke-width': 1.2 }));
+    svg.appendChild(svgEl('line', { x1: marginL, x2: marginL+pw, y1: marginT+ph, y2: marginT+ph, stroke: 'var(--ink)', 'stroke-width': 1.2 }));
+
+    // axis titles
+    const xTitle = svgEl('text', { x: marginL + pw/2, y: H - 6, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--ink)', 'font-family': 'var(--font-sans)', 'font-weight': 600 });
+    xTitle.textContent = 'Volume (mL)';
+    svg.appendChild(xTitle);
+
+    const yTitle = svgEl('text', { x: 14, y: marginT + ph/2, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--ink)', 'font-family': 'var(--font-sans)', 'font-weight': 600, transform: 'rotate(-90 14 ' + (marginT+ph/2) + ')' });
+    yTitle.textContent = 'Norm. Abs. (mAU)';
+    svg.appendChild(yTitle);
+
+    // calibration fit (if applicable)
+    let fit = null;
+    if(panel.calibration.enabled && panel.calibration.rawRows && !panel.calibration.error){
+      fit = computeFit(panel.calibration.rawRows, panel.columnType);
+    }
+
+    const clippedGroup = svgEl('g', { 'clip-path': 'url(#'+clipId+')' });
+    svg.appendChild(clippedGroup);
+
+    // calibration windows (drawn first, under the trace lines)
+    if(fit && !fit.error){
+      validSamples.forEach(function(s, i){
+        const color = colorFor(i);
+        const mw = parseFloat(s.mw);
+        if(!mw || mw <= 0 || Number.isNaN(mw)) return;
+        const mono = predictElution(fit, mw);
+        if(mono) drawWindow(clippedGroup, svg, mono, color, 'Monomer', sx, sy, marginT, ph, xMin, xMax);
+        if(panel.calibration.showDimer){
+          const dimer = predictElution(fit, mw * 2);
+          if(dimer) drawWindow(clippedGroup, svg, dimer, 'var(--data-dimer)', 'Dimer', sx, sy, marginT, ph, xMin, xMax);
+        }
+      });
+    }
+
+    // trace lines
+    validSamples.forEach(function(s, i){
+      const color = colorFor(i);
+      let d = '';
+      s.points.forEach(function(p, idx){
+        d += (idx===0 ? 'M ' : 'L ') + sx(p.mL).toFixed(2) + ' ' + sy(p.norm).toFixed(2) + ' ';
+      });
+      clippedGroup.appendChild(svgEl('path', { d: d, fill: 'none', style: 'stroke:'+color, 'stroke-width': 3, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+
+      // end-of-line label
+      let lastPt = s.points[s.points.length - 1];
+      for(let k = s.points.length - 1; k >= 0; k--){
+        if(s.points[k].mL <= xMax){ lastPt = s.points[k]; break; }
+      }
+      const lx = sx(lastPt.mL), ly = sy(lastPt.norm);
+      const nearRight = lx > marginL + pw - 60;
+      const label = svgEl('text', {
+        x: lx + (nearRight ? -6 : 6),
+        y: ly - 4,
+        'text-anchor': nearRight ? 'end' : 'start',
+        'font-size': 11,
+        'font-family': 'var(--font-mono)',
+        style: 'fill:'+color+'; paint-order: stroke fill; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round;'
+      });
+      label.textContent = s.label || ('Sample ' + (i+1));
+      svg.appendChild(label);
+    });
+
+    return { svg: svg };
+  }
+
+  function drawWindow(group, svg, pred, color, labelText, sx, sy, marginT, ph, xMin, xMax){
+    const hasWindow = pred.lo !== null && pred.hi !== null && (pred.hi - pred.lo) > 1e-6;
+    if(hasWindow){
+      const x1 = sx(pred.lo), x2 = sx(pred.hi);
+      group.appendChild(svgEl('rect', { x: Math.min(x1,x2), y: marginT, width: Math.abs(x2-x1), height: ph, style: 'fill:'+color, opacity: 0.13 }));
+      group.appendChild(svgEl('line', { x1: x1, x2: x1, y1: marginT, y2: marginT+ph, style: 'stroke:'+color, 'stroke-width': 1.4, 'stroke-dasharray': '4 3' }));
+      group.appendChild(svgEl('line', { x1: x2, x2: x2, y1: marginT, y2: marginT+ph, style: 'stroke:'+color, 'stroke-width': 1.4, 'stroke-dasharray': '4 3' }));
+      const labelX = Math.max(x1, x2);
+      const nearRight = labelX > sx(xMin) + (sx(xMax)-sx(xMin)) - 40;
+      const lx = labelX + (nearRight ? -6 : 6);
+      const ly = marginT + 14;
+      const t = svgEl('text', {
+        x: lx, y: ly, 'text-anchor': 'start', 'font-size': 10.5, 'font-family': 'var(--font-mono)',
+        transform: 'rotate(-90 ' + lx + ' ' + ly + ')',
+        style: 'fill:'+color+'; paint-order: stroke fill; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round;'
+      });
+      t.textContent = labelText + ' (' + fmt(pred.lo,1) + '–' + fmt(pred.hi,1) + ' mL)';
+      svg.appendChild(t);
+    } else {
+      const x0 = sx(pred.elution);
+      group.appendChild(svgEl('line', { x1: x0, x2: x0, y1: marginT, y2: marginT+ph, style: 'stroke:'+color, 'stroke-width': 1.4, 'stroke-dasharray': '4 3' }));
+      const nearRight = x0 > sx(xMin) + (sx(xMax)-sx(xMin)) - 40;
+      const lx = x0 + (nearRight ? -6 : 6);
+      const ly = marginT + 14;
+      const t = svgEl('text', {
+        x: lx, y: ly, 'text-anchor': 'start', 'font-size': 10.5, 'font-family': 'var(--font-mono)',
+        transform: 'rotate(-90 ' + lx + ' ' + ly + ')',
+        style: 'fill:'+color+'; paint-order: stroke fill; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round;'
+      });
+      t.textContent = labelText + ' (' + fmt(pred.elution,1) + ' mL)';
+      svg.appendChild(t);
+    }
+  }
+
+  // ============================================================
+  // Save chart as PNG / SVG
+  // ============================================================
+  function downloadChartAsSvg(svgEl, baseName){ window.LabFigure.downloadSvg(svgEl, baseName); }
+  function downloadChartAsPng(svgEl, baseName){ window.LabFigure.downloadPng(svgEl, baseName); }
+
+  // ---------- init ----------
+  renderControls();
+  renderPlots();
+})();
+</script>
+</body>
+</html>

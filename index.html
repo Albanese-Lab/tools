@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Albanese Lab Tools</title>
+<meta name="description" content="Browser-based plotting tools for CD, ITC and chromatography data from the Albanese Lab at Wake Forest University.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* Layout: a short intro, then a two-column grid of instrument cards grouped by technique */
+  :root{
+    --ink:#16211f; --surface:#ffffff; --surface-alt:#f2f5f4; --border:#dbe3e1; --muted:#5c6d69;
+    --accent:#009988; --accent-ink:#ffffff;
+    --sans:'IBM Plex Sans', system-ui, sans-serif; --mono:'IBM Plex Mono', ui-monospace, monospace;
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+    --ink:#e7efed; --surface:#141c1b; --surface-alt:#1b2725; --border:#2c3936; --muted:#9fb0ac;
+    --accent:#2bcdb8; --accent-ink:#06201c; color-scheme:dark } }
+  :root[data-theme="dark"]{ --ink:#e7efed; --surface:#141c1b; --surface-alt:#1b2725; --border:#2c3936; --muted:#9fb0ac;
+    --accent:#2bcdb8; --accent-ink:#06201c; color-scheme:dark }
+  *{ box-sizing:border-box }
+  html,body{ margin:0 }
+  body{ background:var(--surface); color:var(--ink); font:16px/1.5 var(--sans) }
+  .wrap{ max-width:1040px; margin:0 auto; padding:40px max(16px, env(safe-area-inset-right,0px)) 64px max(16px, env(safe-area-inset-left,0px)) }
+  header{ display:flex; flex-direction:column; gap:8px; margin-bottom:36px; max-width:68ch }
+  .eyebrow{ font:500 12px var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--accent) }
+  h1{ font-size:clamp(28px,4vw,38px); line-height:1.1; margin:0; letter-spacing:-.015em; text-wrap:balance }
+  header p{ margin:0; color:var(--muted) }
+  h2{ font:600 12px var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--muted);
+      margin:32px 0 12px; padding-bottom:8px; border-bottom:1px solid var(--border) }
+  .grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(300px,1fr)); gap:14px }
+  a.tool{ display:flex; flex-direction:column; gap:6px; padding:16px 18px; border:1px solid var(--border); border-radius:10px;
+          text-decoration:none; color:inherit; background:var(--surface); min-width:0 }
+  a.tool:hover{ border-color:var(--accent) }
+  a.tool:focus-visible{ outline:2px solid var(--accent); outline-offset:2px }
+  .tool h3{ margin:0; font-size:17px; font-weight:600 }
+  .tool p{ margin:0; font-size:14px; color:var(--muted) }
+  .input{ margin-top:4px; font:12px var(--mono); color:var(--ink); background:var(--surface-alt);
+          border-radius:5px; padding:4px 8px; align-self:flex-start; max-width:100% }
+  .note{ margin-top:40px; padding:14px 16px; background:var(--surface-alt); border-radius:8px; font-size:14px; color:var(--muted); max-width:72ch }
+  .note strong{ color:var(--ink) }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Albanese Lab · Wake Forest University</span>
+    <h1>Albanese Lab Tools</h1>
+    <p>Plot raw instrument exports in your browser and save publication-ready figures as PNG or SVG. Each tool overlays several samples per panel and shows the processed numbers in a data table.</p>
+  </header>
+
+  <h2>Spectroscopy and calorimetry</h2>
+  <div class="grid">
+    <a class="tool" href="cd.html">
+      <h3>CD Spectra Plotter</h3>
+      <p>Mean residue ellipticity spectra (190 to 260 nm) and thermal melts, with optional buffer blank subtraction.</p>
+      <span class="input">Input: Jasco .txt export</span>
+    </a>
+    <a class="tool" href="itc.html">
+      <h3>ITC Thermogram Plotter</h3>
+      <p>Raw injection-heat traces (DP versus time) overlaid by sample, with an optional temperature label.</p>
+      <span class="input">Input: 2-column raw data .csv</span>
+    </a>
+  </div>
+
+  <h2>Chromatography</h2>
+  <div class="grid">
+    <a class="tool" href="his-tag.html">
+      <h3>His-Tag Purification Plotter</h3>
+      <p>Normalized Ni-NTA / IMAC affinity purification traces.</p>
+      <span class="input">Input: Unicorn .asc export</span>
+    </a>
+    <a class="tool" href="sec.html">
+      <h3>SEC Trace Plotter</h3>
+      <p>Preparative Superdex 75 and 200 traces, with predicted monomer and dimer elution windows from a calibration curve.</p>
+      <span class="input">Input: Unicorn .asc + calibration .csv</span>
+    </a>
+    <a class="tool" href="asec.html">
+      <h3>Analytical SEC Plotter</h3>
+      <p>Analytical aSEC 75 and 200 traces, with predicted monomer and dimer elution windows from a calibration curve.</p>
+      <span class="input">Input: Unicorn .asc + calibration .csv</span>
+    </a>
+    <a class="tool" href="flash.html">
+      <h3>Biotage Flash Plotter</h3>
+      <p>Isolera flash runs: normalized UV with the %B gradient on a second axis. Includes demo data to try it out.</p>
+      <span class="input">Input: Isolera .csv export</span>
+    </a>
+  </div>
+
+  <h2>Literature</h2>
+  <div class="grid">
+    <a class="tool" href="https://albanese-lab.github.io/litfeed/">
+      <h3>Lit Feed</h3>
+      <p>New papers and graphical abstracts from ACS, Nature, Science, Cell Press, RSC, Wiley, PNAS, eLife and preprint servers, updated every morning.</p>
+    </a>
+  </div>
+
+  <p class="note"><strong>Your data stays on your computer.</strong> Files are read by your browser and never uploaded. Nothing is saved between visits, so save your figures before closing the page. Exported figures always use a white background and light colors, even if your computer is in dark mode.</p>
+</div>
+</body>
+</html>

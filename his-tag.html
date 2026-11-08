@@ -1,0 +1,977 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>His-Tag Purification Plotter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #16211f;
+    --surface: #ffffff;
+    --surface-alt: #f2f5f4;
+    --border: #dbe3e1;
+    --muted: #5c6d69;
+    --accent: #009988;
+    --accent-ink: #ffffff;
+
+    --data-teal: #009988;
+    --data-orange: #E69F00;
+    --data-pink: #BB5566;
+    --data-blue: #004488;
+    --data-brown: #994F00;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #e7efed;
+      --surface: #141c1b;
+      --surface-alt: #1b2725;
+      --border: #2c3936;
+      --muted: #9fb0ac;
+      --accent: #2bcdb8;
+      --accent-ink: #06201c;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ink: #e7efed;
+    --surface: #141c1b;
+    --surface-alt: #1b2725;
+    --border: #2c3936;
+    --muted: #9fb0ac;
+    --accent: #2bcdb8;
+    --accent-ink: #06201c;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background: var(--surface);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    line-height: 1.4;
+  }
+
+  .mono {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  header.app-header {
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 14px;
+    background: var(--surface);
+  }
+
+  header.app-header h1 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  header.app-header p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.88rem;
+  }
+
+  main {
+    padding: 20px 24px 60px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 16px;
+  }
+
+  .panel-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  .panel-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .panel-grid {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+  }
+
+  @media (max-width: 900px) {
+    .panel-grid { grid-template-columns: 1fr; }
+  }
+
+  .control-col {
+    background: var(--surface-alt);
+    border-right: 1px solid var(--border);
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  @media (max-width: 900px) {
+    .control-col { border-right: none; border-bottom: 1px solid var(--border); }
+  }
+
+  .plot-col {
+    background: var(--surface);
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .field-label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  input[type="text"], input[type="number"] {
+    width: 100%;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--ink);
+    border-radius: 6px;
+    padding: 7px 9px;
+    font-family: inherit;
+    font-size: 0.9rem;
+  }
+
+  input[type="file"] {
+    width: 100%;
+    font-size: 0.8rem;
+    color: var(--ink);
+  }
+
+  input:focus, button:focus, select:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  button {
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: 6px;
+    padding: 8px 12px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--ink);
+  }
+
+  button.primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: var(--accent);
+  }
+
+  button.small {
+    padding: 4px 9px;
+    font-size: 0.76rem;
+  }
+
+  button:hover { filter: brightness(0.97); }
+
+  .panel-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: space-between;
+  }
+
+  .panel-title-row input[type="text"] {
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  hr.sep {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2px 0;
+  }
+
+  .section-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .sample-row {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .sample-row-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .swatch-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex: none;
+  }
+
+  .sample-row-head .row-title {
+    font-size: 0.78rem;
+    color: var(--muted);
+    flex: 1;
+  }
+
+  .status-line {
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  .status-line.error {
+    color: var(--data-pink);
+    font-weight: 500;
+  }
+
+  .status-line.ok {
+    color: var(--accent);
+  }
+
+  .axis-window-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .axis-window-row input { width: 100%; }
+
+  .add-sample-btn {
+    align-self: flex-start;
+  }
+
+  .plot-empty {
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.88rem;
+  }
+
+  svg.trace-svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .chart-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .swatch-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .swatch-row .swatch-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .swatch-row .swatch-chip {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    flex: none;
+  }
+
+  .table-toggle {
+    align-self: flex-start;
+  }
+
+  .table-wrapper {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  table.data-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.8rem;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  table.data-table th, table.data-table td {
+    padding: 5px 10px;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  table.data-table th:first-child, table.data-table td:first-child {
+    text-align: left;
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  }
+
+  table.data-table thead th {
+    color: var(--muted);
+    font-weight: 600;
+    background: var(--surface-alt);
+    position: sticky;
+    top: 0;
+  }
+
+  .remove-panel-btn {
+    color: var(--data-pink);
+    border-color: var(--border);
+  }
+</style>
+<script src="figure-export.js" data-tool="HisTag"></script>
+</head>
+<body>
+<header class="app-header">
+  <h1>His-Tag Purification Plotter</h1>
+  <p>Overlay Ni-NTA / IMAC affinity purification traces.</p>
+</header>
+
+<main>
+  <div class="toolbar">
+    <button class="primary" id="add-panel-btn" type="button">+ Add panel</button>
+  </div>
+  <div class="panel-stack" id="panel-stack"></div>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var PALETTE = ["--data-teal", "--data-orange", "--data-pink", "--data-blue", "--data-brown"];
+  var uidCounter = 1;
+  function nextId() { return "id" + (uidCounter++); }
+
+  function makeSample() {
+    return {
+      id: nextId(),
+      label: "",
+      fileName: "",
+      points: null,     // array of {mL, normAbs} once parsed
+      error: "",
+      loading: false
+    };
+  }
+
+  function makePanel(n) {
+    return {
+      id: nextId(),
+      label: "Panel " + n,
+      xMin: "",
+      xMax: "",
+      samples: [makeSample(), makeSample(), makeSample()]
+    };
+  }
+
+  var panels = [makePanel(1)];
+
+  function escapeHtml(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  // ---------- Parsing ----------
+  // .asc export: tab-separated; skip first 3 header lines; first two tab-separated
+  // fields of each remaining line are mL and mAU (ignore any further columns);
+  // drop the final line (trailing incomplete row); coerce to numbers, drop rows
+  // that fail to parse; normalize mAU across the whole trace.
+  function parseAsc(text) {
+    var lines = text.split(/\r\n|\r|\n/);
+    if (lines.length <= 4) {
+      throw new Error("This file doesn't look like a full .asc trace export (too few lines).");
+    }
+    var body = lines.slice(3, lines.length - 1);
+    var rows = [];
+    for (var i = 0; i < body.length; i++) {
+      var line = body[i];
+      if (line === "") continue;
+      var fields = line.split("\t");
+      if (fields.length < 2) continue;
+      var mL = parseFloat(fields[0]);
+      var mAU = parseFloat(fields[1]);
+      if (isNaN(mL) || isNaN(mAU)) continue;
+      rows.push({ mL: mL, mAU: mAU });
+    }
+    if (rows.length === 0) {
+      throw new Error("Couldn't find any readable numeric rows in this file.");
+    }
+    var min = rows[0].mAU, max = rows[0].mAU;
+    for (var j = 1; j < rows.length; j++) {
+      if (rows[j].mAU < min) min = rows[j].mAU;
+      if (rows[j].mAU > max) max = rows[j].mAU;
+    }
+    var span = max - min;
+    var points = rows.map(function (r) {
+      var norm = span === 0 ? 0 : (r.mAU - min) / span;
+      return { mL: r.mL, normAbs: norm };
+    });
+    return points;
+  }
+
+  // ---------- Nice ticks ----------
+  function niceStep(range, targetCount) {
+    if (range <= 0) return 1;
+    var raw = range / Math.max(1, targetCount);
+    var mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    var norm = raw / mag;
+    var step;
+    if (norm < 1.5) step = 1;
+    else if (norm < 3) step = 2;
+    else if (norm < 7) step = 5;
+    else step = 10;
+    return step * mag;
+  }
+
+  function niceTicks(min, max, targetCount) {
+    var step = niceStep(max - min, targetCount);
+    var start = Math.ceil(min / step) * step;
+    var ticks = [];
+    for (var v = start; v <= max + 1e-9; v += step) {
+      ticks.push(Math.round(v / step) * step);
+    }
+    return ticks;
+  }
+
+  function fmtNum(v) {
+    var r = Math.round(v * 100) / 100;
+    return (Math.abs(r) < 1e-9 ? 0 : r).toString();
+  }
+
+  // ============================================================
+  // Save chart as PNG / SVG
+  // ============================================================
+  function downloadChartAsSvg(svgEl, baseName){ window.LabFigure.downloadSvg(svgEl, baseName); }
+  function downloadChartAsPng(svgEl, baseName){ window.LabFigure.downloadPng(svgEl, baseName); }
+
+  // ---------- Rendering: control column ----------
+  function buildPanelDOM(panel, cardEl) {
+    cardEl.innerHTML = "";
+    var grid = document.createElement("div");
+    grid.className = "panel-grid";
+
+    var controlCol = document.createElement("div");
+    controlCol.className = "control-col";
+
+    var titleRow = document.createElement("div");
+    titleRow.className = "panel-title-row";
+    var labelInput = document.createElement("input");
+    labelInput.type = "text";
+    labelInput.value = panel.label;
+    labelInput.setAttribute("aria-label", "Panel label");
+    labelInput.addEventListener("input", function () {
+      panel.label = labelInput.value;
+    });
+    titleRow.appendChild(labelInput);
+
+    if (panels.length > 1) {
+      var removePanelBtn = document.createElement("button");
+      removePanelBtn.type = "button";
+      removePanelBtn.className = "remove-panel-btn small";
+      removePanelBtn.textContent = "Remove panel";
+      removePanelBtn.addEventListener("click", function () {
+        panels = panels.filter(function (p) { return p.id !== panel.id; });
+        renderAll();
+      });
+      titleRow.appendChild(removePanelBtn);
+    }
+    controlCol.appendChild(titleRow);
+    controlCol.appendChild(document.createElement("hr")).className = "sep";
+
+    var sectionLabel = document.createElement("div");
+    sectionLabel.className = "section-label";
+    sectionLabel.textContent = "Overlay samples";
+    controlCol.appendChild(sectionLabel);
+
+    panel.samples.forEach(function (sample, idx) {
+      controlCol.appendChild(buildSampleRow(panel, sample, idx));
+    });
+
+    var addSampleBtn = document.createElement("button");
+    addSampleBtn.type = "button";
+    addSampleBtn.className = "add-sample-btn";
+    addSampleBtn.textContent = "+ Add another sample";
+    addSampleBtn.addEventListener("click", function () {
+      panel.samples.push(makeSample());
+      buildPanelDOM(panel, cardEl);
+      renderPlot(panel, cardEl);
+    });
+    controlCol.appendChild(addSampleBtn);
+
+    controlCol.appendChild(document.createElement("hr")).className = "sep";
+
+    var xLabel = document.createElement("div");
+    xLabel.className = "section-label";
+    xLabel.textContent = "Fixed x-axis window (optional)";
+    controlCol.appendChild(xLabel);
+
+    var xRow = document.createElement("div");
+    xRow.className = "axis-window-row";
+
+    var xMinWrap = document.createElement("div");
+    xMinWrap.style.flex = "1";
+    var xMinLbl = document.createElement("span");
+    xMinLbl.className = "field-label";
+    xMinLbl.textContent = "Min mL";
+    var xMinInput = document.createElement("input");
+    xMinInput.type = "number";
+    xMinInput.step = "any";
+    xMinInput.placeholder = "auto";
+    xMinInput.value = panel.xMin;
+    xMinInput.addEventListener("input", function () {
+      panel.xMin = xMinInput.value;
+      renderPlot(panel, cardEl);
+    });
+    xMinWrap.appendChild(xMinLbl);
+    xMinWrap.appendChild(xMinInput);
+
+    var xMaxWrap = document.createElement("div");
+    xMaxWrap.style.flex = "1";
+    var xMaxLbl = document.createElement("span");
+    xMaxLbl.className = "field-label";
+    xMaxLbl.textContent = "Max mL";
+    var xMaxInput = document.createElement("input");
+    xMaxInput.type = "number";
+    xMaxInput.step = "any";
+    xMaxInput.placeholder = "auto";
+    xMaxInput.value = panel.xMax;
+    xMaxInput.addEventListener("input", function () {
+      panel.xMax = xMaxInput.value;
+      renderPlot(panel, cardEl);
+    });
+    xMaxWrap.appendChild(xMaxLbl);
+    xMaxWrap.appendChild(xMaxInput);
+
+    xRow.appendChild(xMinWrap);
+    xRow.appendChild(xMaxWrap);
+    controlCol.appendChild(xRow);
+
+    var plotCol = document.createElement("div");
+    plotCol.className = "plot-col";
+
+    grid.appendChild(controlCol);
+    grid.appendChild(plotCol);
+    cardEl.appendChild(grid);
+  }
+
+  function colorForIndex(i) {
+    var varName = PALETTE[i % PALETTE.length];
+    return "var(" + varName + ")";
+  }
+
+  function buildSampleRow(panel, sample, idx) {
+    var row = document.createElement("div");
+    row.className = "sample-row";
+
+    var head = document.createElement("div");
+    head.className = "sample-row-head";
+    var dot = document.createElement("span");
+    dot.className = "swatch-dot";
+    dot.style.background = colorForIndex(idx);
+    var title = document.createElement("span");
+    title.className = "row-title";
+    title.textContent = "Sample " + (idx + 1);
+    head.appendChild(dot);
+    head.appendChild(title);
+
+    if (panel.samples.length > 1) {
+      var removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "small";
+      removeBtn.textContent = "Remove";
+      removeBtn.addEventListener("click", function () {
+        panel.samples = panel.samples.filter(function (s) { return s.id !== sample.id; });
+        var cardEl = row.closest(".panel-card");
+        buildPanelDOM(panel, cardEl);
+        renderPlot(panel, cardEl);
+      });
+      head.appendChild(removeBtn);
+    }
+    row.appendChild(head);
+
+    var fileLbl = document.createElement("span");
+    fileLbl.className = "field-label";
+    fileLbl.textContent = "Trace file (.asc)";
+    row.appendChild(fileLbl);
+
+    var fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = ".asc,.txt,text/plain";
+    fileInput.addEventListener("change", function () {
+      var file = fileInput.files && fileInput.files[0];
+      if (!file) return;
+      sample.fileName = file.name;
+      sample.error = "";
+      sample.points = null;
+      sample.loading = true;
+      var cardEl = row.closest(".panel-card");
+      renderPlot(panel, cardEl);
+
+      var reader = new FileReader();
+      reader.onload = function () {
+        try {
+          var text = String(reader.result || "");
+          sample.points = parseAsc(text);
+          sample.error = "";
+        } catch (err) {
+          sample.points = null;
+          sample.error = err && err.message ? err.message : "Could not parse this file.";
+        }
+        sample.loading = false;
+        renderPlot(panel, cardEl);
+      };
+      reader.onerror = function () {
+        sample.loading = false;
+        sample.points = null;
+        sample.error = "This file couldn't be read from disk. Try re-exporting it and picking it again.";
+        renderPlot(panel, cardEl);
+      };
+      reader.readAsText(file);
+    });
+    row.appendChild(fileInput);
+
+    var labelLbl = document.createElement("span");
+    labelLbl.className = "field-label";
+    labelLbl.textContent = "Sample label";
+    row.appendChild(labelLbl);
+
+    var labelInput = document.createElement("input");
+    labelInput.type = "text";
+    labelInput.placeholder = "e.g. WT elution";
+    labelInput.value = sample.label;
+    labelInput.addEventListener("input", function () {
+      sample.label = labelInput.value;
+      var cardEl = row.closest(".panel-card");
+      renderPlot(panel, cardEl);
+    });
+    row.appendChild(labelInput);
+
+    var status = document.createElement("div");
+    status.className = "status-line";
+    status.setAttribute("data-role", "status");
+    row.appendChild(status);
+    updateSampleStatus(status, sample);
+
+    return row;
+  }
+
+  function updateSampleStatus(statusEl, sample) {
+    if (sample.loading) {
+      statusEl.className = "status-line";
+      statusEl.textContent = "Reading " + sample.fileName + "…";
+    } else if (sample.error) {
+      statusEl.className = "status-line error";
+      statusEl.textContent = sample.fileName
+        ? sample.fileName + " — " + sample.error
+        : sample.error;
+    } else if (sample.points) {
+      statusEl.className = "status-line ok";
+      statusEl.textContent = sample.fileName + " — " + sample.points.length + " points loaded";
+    } else {
+      statusEl.className = "status-line";
+      statusEl.textContent = "No file selected yet.";
+    }
+  }
+
+  // ---------- Rendering: plot column ----------
+  function renderPlot(panel, cardEl) {
+    var plotCol = cardEl.querySelector(".plot-col");
+    plotCol.innerHTML = "";
+
+    // refresh sample status lines in control column (already in DOM, just update text)
+    var rows = cardEl.querySelectorAll(".sample-row");
+    rows.forEach(function (rowEl, i) {
+      var sample = panel.samples[i];
+      if (!sample) return;
+      var statusEl = rowEl.querySelector('[data-role="status"]');
+      if (statusEl) updateSampleStatus(statusEl, sample);
+    });
+
+    var validSamples = [];
+    panel.samples.forEach(function (sample, idx) {
+      if (sample.points && sample.points.length > 0) {
+        validSamples.push({ sample: sample, colorVar: PALETTE[idx % PALETTE.length] });
+      }
+    });
+
+    if (validSamples.length === 0) {
+      var empty = document.createElement("div");
+      empty.className = "plot-empty";
+      empty.textContent = "No traces loaded yet. Upload .asc trace files on the left to see overlaid purification traces here.";
+      plotCol.appendChild(empty);
+      return;
+    }
+
+    // x domain
+    var userMin = parseFloat(panel.xMin);
+    var userMax = parseFloat(panel.xMax);
+    var useFixed = !isNaN(userMin) && !isNaN(userMax) && userMax > userMin;
+
+    var xMin, xMax;
+    if (useFixed) {
+      xMin = userMin;
+      xMax = userMax;
+    } else {
+      var allMin = Infinity, allMax = -Infinity;
+      validSamples.forEach(function (v) {
+        v.sample.points.forEach(function (p) {
+          if (p.mL < allMin) allMin = p.mL;
+          if (p.mL > allMax) allMax = p.mL;
+        });
+      });
+      xMin = allMin - 1;
+      xMax = allMax + 1;
+    }
+
+    var yMin = 0, yMax = 1.05;
+
+    // SVG geometry
+    var W = 680, H = 400;
+    var margin = { left: 54, right: 18, top: 14, bottom: 42 };
+    var plotW = W - margin.left - margin.right;
+    var plotH = H - margin.top - margin.bottom;
+
+    function xPix(mL) { return margin.left + ((mL - xMin) / (xMax - xMin)) * plotW; }
+    function yPix(norm) { return margin.top + plotH - ((norm - yMin) / (yMax - yMin)) * plotH; }
+
+    var svgParts = [];
+    svgParts.push('<svg class="trace-svg" viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Overlaid purification traces">');
+
+    // gridlines + y ticks
+    var yTicks = [0, 0.2, 0.4, 0.6, 0.8, 1.0];
+    yTicks.forEach(function (t) {
+      var yy = yPix(t);
+      svgParts.push('<line x1="' + margin.left + '" y1="' + yy + '" x2="' + (W - margin.right) + '" y2="' + yy + '" stroke="var(--border)" stroke-width="1" />');
+      svgParts.push('<text x="' + (margin.left - 8) + '" y="' + (yy + 3) + '" text-anchor="end" font-size="10" font-family="IBM Plex Mono, ui-monospace, monospace" fill="var(--muted)">' + fmtNum(t) + '</text>');
+    });
+
+    // x ticks
+    var xTicks = niceTicks(xMin, xMax, 7);
+    xTicks.forEach(function (t) {
+      var xx = xPix(t);
+      svgParts.push('<line x1="' + xx + '" y1="' + margin.top + '" x2="' + xx + '" y2="' + (H - margin.bottom) + '" stroke="var(--border)" stroke-width="1" stroke-dasharray="2,3" />');
+      svgParts.push('<text x="' + xx + '" y="' + (H - margin.bottom + 16) + '" text-anchor="middle" font-size="10" font-family="IBM Plex Mono, ui-monospace, monospace" fill="var(--muted)">' + fmtNum(t) + '</text>');
+    });
+
+    // axes
+    svgParts.push('<line x1="' + margin.left + '" y1="' + (H - margin.bottom) + '" x2="' + (W - margin.right) + '" y2="' + (H - margin.bottom) + '" stroke="var(--ink)" stroke-width="1.25" />');
+    svgParts.push('<line x1="' + margin.left + '" y1="' + margin.top + '" x2="' + margin.left + '" y2="' + (H - margin.bottom) + '" stroke="var(--ink)" stroke-width="1.25" />');
+
+    // axis titles
+    svgParts.push('<text x="' + (margin.left + plotW / 2) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="11" font-weight="600" font-family="IBM Plex Sans, system-ui, sans-serif" fill="var(--ink)">Volume (mL)</text>');
+    svgParts.push('<text x="14" y="' + (margin.top + plotH / 2) + '" text-anchor="middle" font-size="11" font-weight="600" font-family="IBM Plex Sans, system-ui, sans-serif" fill="var(--ink)" transform="rotate(-90 14 ' + (margin.top + plotH / 2) + ')">Norm. Abs. (mAU)</text>');
+
+    // clip path so lines/labels don't spill past the plot area
+    var clipId = "clip-" + panel.id;
+    svgParts.push('<clipPath id="' + clipId + '"><rect x="' + margin.left + '" y="' + margin.top + '" width="' + plotW + '" height="' + plotH + '" /></clipPath>');
+
+    var labelParts = [];
+
+    validSamples.forEach(function (v, i) {
+      var pts = v.sample.points;
+      // sort a copy by mL to keep the polyline monotonic left-to-right
+      var sorted = pts.slice().sort(function (a, b) { return a.mL - b.mL; });
+      var d = "";
+      sorted.forEach(function (p, pi) {
+        var cmd = pi === 0 ? "M" : "L";
+        d += cmd + xPix(p.mL).toFixed(2) + "," + yPix(p.normAbs).toFixed(2) + " ";
+      });
+      var color = "var(" + v.colorVar + ")";
+      svgParts.push('<path d="' + d + '" fill="none" stroke="' + color + '" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" clip-path="url(#' + clipId + ')" />');
+
+      // find last visible point (within domain) for the end-of-line label
+      var visible = sorted.filter(function (p) { return p.mL >= xMin && p.mL <= xMax; });
+      var anchorPoint = visible.length ? visible[visible.length - 1] : sorted[sorted.length - 1];
+      var lx = xPix(anchorPoint.mL);
+      var ly = yPix(anchorPoint.normAbs);
+      var text = escapeHtml(v.sample.label || ("Sample " + (i + 1)));
+      var anchorRight = lx > (margin.left + plotW * 0.72);
+      var tx = anchorRight ? lx - 8 : lx + 8;
+      var anchorAttr = anchorRight ? "end" : "start";
+      labelParts.push(
+        '<text x="' + tx.toFixed(2) + '" y="' + (ly - 6).toFixed(2) + '" text-anchor="' + anchorAttr + '" font-size="11" font-weight="600" ' +
+        'font-family="IBM Plex Sans, system-ui, sans-serif" fill="' + color + '" ' +
+        'paint-order="stroke" stroke="var(--surface)" stroke-width="3">' + text + '</text>'
+      );
+    });
+
+    svgParts.push(labelParts.join(""));
+    svgParts.push('</svg>');
+
+    var svgWrap = document.createElement("div");
+    svgWrap.innerHTML = svgParts.join("");
+
+    var chartContainer = document.createElement("div");
+    chartContainer.id = "chart-" + panel.id;
+    chartContainer.appendChild(svgWrap.firstElementChild || svgWrap);
+    plotCol.appendChild(chartContainer);
+
+    var chartActions = document.createElement("div");
+    chartActions.className = "chart-actions";
+    var savePngBtn = document.createElement("button");
+    savePngBtn.type = "button";
+    savePngBtn.className = "small chart-save-btn";
+    savePngBtn.textContent = "Save PNG";
+    savePngBtn.dataset.target = chartContainer.id;
+    savePngBtn.dataset.format = "png";
+    var saveSvgBtn = document.createElement("button");
+    saveSvgBtn.type = "button";
+    saveSvgBtn.className = "small chart-save-btn";
+    saveSvgBtn.textContent = "Save SVG";
+    saveSvgBtn.dataset.target = chartContainer.id;
+    saveSvgBtn.dataset.format = "svg";
+    chartActions.appendChild(savePngBtn);
+    chartActions.appendChild(saveSvgBtn);
+    plotCol.appendChild(chartActions);
+
+    // swatch row (redundant color+label accessibility cue)
+    var swatchRow = document.createElement("div");
+    swatchRow.className = "swatch-row";
+    validSamples.forEach(function (v, i) {
+      var item = document.createElement("div");
+      item.className = "swatch-item";
+      var chip = document.createElement("span");
+      chip.className = "swatch-chip";
+      chip.style.background = "var(" + v.colorVar + ")";
+      var lbl = document.createElement("span");
+      lbl.textContent = v.sample.label || ("Sample " + (i + 1));
+      item.appendChild(chip);
+      item.appendChild(lbl);
+      swatchRow.appendChild(item);
+    });
+    plotCol.appendChild(swatchRow);
+
+    // data table toggle
+    var toggleBtn = document.createElement("button");
+    toggleBtn.type = "button";
+    toggleBtn.className = "table-toggle";
+    toggleBtn.textContent = "View data table";
+    var tableWrap = document.createElement("div");
+    tableWrap.className = "table-wrapper";
+    tableWrap.style.display = "none";
+
+    var table = document.createElement("table");
+    table.className = "data-table";
+    var thead = document.createElement("thead");
+    thead.innerHTML = "<tr><th>Sample</th><th>mL</th><th>Norm. Abs.</th></tr>";
+    table.appendChild(thead);
+    var tbody = document.createElement("tbody");
+    validSamples.forEach(function (v, i) {
+      var sorted = v.sample.points.slice().sort(function (a, b) { return a.mL - b.mL; });
+      var name = v.sample.label || ("Sample " + (i + 1));
+      sorted.forEach(function (p) {
+        var tr = document.createElement("tr");
+        tr.innerHTML = "<td>" + escapeHtml(name) + "</td><td>" + p.mL.toFixed(3) + "</td><td>" + p.normAbs.toFixed(4) + "</td>";
+        tbody.appendChild(tr);
+      });
+    });
+    table.appendChild(tbody);
+    tableWrap.appendChild(table);
+
+    toggleBtn.addEventListener("click", function () {
+      var open = tableWrap.style.display !== "none";
+      tableWrap.style.display = open ? "none" : "block";
+      toggleBtn.textContent = open ? "View data table" : "Hide data table";
+    });
+
+    plotCol.appendChild(toggleBtn);
+    plotCol.appendChild(tableWrap);
+  }
+
+  // polyfill-ish closest() safeguard (modern browsers have it natively)
+  if (!Element.prototype.closest) {
+    Element.prototype.closest = function (sel) {
+      var el = this;
+      while (el) {
+        if (el.matches && el.matches(sel)) return el;
+        el = el.parentElement;
+      }
+      return null;
+    };
+  }
+
+  function renderAll() {
+    var stack = document.getElementById("panel-stack");
+    stack.innerHTML = "";
+    panels.forEach(function (panel) {
+      var card = document.createElement("div");
+      card.className = "panel-card";
+      stack.appendChild(card);
+      buildPanelDOM(panel, card);
+      renderPlot(panel, card);
+    });
+  }
+
+  document.getElementById("add-panel-btn").addEventListener("click", function () {
+    panels.push(makePanel(panels.length + 1));
+    renderAll();
+  });
+
+  document.addEventListener("click", function (e) {
+    var saveBtn = e.target.closest(".chart-save-btn");
+    if (!saveBtn) return;
+    var targetId = saveBtn.dataset.target;
+    var container = document.getElementById(targetId);
+    var svgEl = container ? container.querySelector("svg") : null;
+    if (!svgEl) return;
+    var panelCard = saveBtn.closest(".panel-card");
+    var labelInput = panelCard ? panelCard.querySelector(".panel-title-row input[type='text']") : null;
+    var labelVal = labelInput ? labelInput.value : "chart";
+    var chartKind = targetId.replace(/-[^-]+$/, "");
+    var base = labelVal + "_" + chartKind;
+    if (saveBtn.dataset.format === "png") downloadChartAsPng(svgEl, base);
+    else downloadChartAsSvg(svgEl, base);
+  });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>

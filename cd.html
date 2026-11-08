@@ -1,0 +1,1105 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CD Spectra Plotter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    color-scheme: light dark;
+    --ink: #16211f;
+    --surface: #ffffff;
+    --surface-alt: #f2f5f4;
+    --border: #dbe3e1;
+    --muted: #5c6d69;
+    --accent: #009988;
+    --accent-ink: #ffffff;
+
+    --data-teal: #009988;
+    --data-orange: #E69F00;
+    --data-pink: #BB5566;
+    --data-blue: #004488;
+    --data-brown: #994F00;
+
+    --label-halo: #ffffff;
+  }
+
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]) {
+      --ink: #e7efed;
+      --surface: #141c1b;
+      --surface-alt: #1b2725;
+      --border: #2c3936;
+      --muted: #9fb0ac;
+      --accent: #2bcdb8;
+      --accent-ink: #06201c;
+      --label-halo: #141c1b;
+      color-scheme: dark;
+    }
+  }
+
+  :root[data-theme="dark"]{
+    --ink: #e7efed;
+    --surface: #141c1b;
+    --surface-alt: #1b2725;
+    --border: #2c3936;
+    --muted: #9fb0ac;
+    --accent: #2bcdb8;
+    --accent-ink: #06201c;
+    --label-halo: #141c1b;
+    color-scheme: dark;
+  }
+  :root[data-theme="light"]{ color-scheme: light; }
+
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--surface);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.4;
+  }
+
+  .topbar{
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
+  .topbar h1{
+    font-size: 1.3rem;
+    margin: 0 0 2px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .topbar p{
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+
+  .main{
+    padding: 22px 24px 60px;
+    max-width: 1440px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+  }
+
+  #proteins{ display:flex; flex-direction:column; gap: 26px; }
+
+  .protein-panel{
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .protein-header{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--surface-alt);
+    border-bottom: 1px solid var(--border);
+  }
+  .protein-label{
+    font-weight: 600;
+    font-size: 0.98rem;
+    flex: 1 1 auto;
+    max-width: 420px;
+  }
+
+  .protein-panel-grid{
+    display: grid;
+    grid-template-columns: 360px 1fr;
+  }
+  @media (max-width: 900px){
+    .protein-panel-grid{ grid-template-columns: 1fr; }
+  }
+
+  .control-panel{
+    background: var(--surface-alt);
+    border-right: 1px solid var(--border);
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  @media (max-width: 900px){
+    .control-panel{ border-right: none; border-bottom: 1px solid var(--border); }
+  }
+
+  .field{ display:flex; flex-direction:column; gap:4px; }
+  .field-label, .section-label{
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .section-label{ margin-top: 4px; }
+
+  input[type=text], input[type=number], select, input[type=file]{
+    font-family: inherit;
+    font-size: 0.88rem;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--ink);
+    border-radius: 6px;
+    padding: 7px 8px;
+    width: 100%;
+  }
+  input[type=file]{ padding: 5px; }
+
+  input:focus, select:focus, button:focus, .toggle-table-btn:focus{
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  .btn{
+    font-family: inherit;
+    font-size: 0.84rem;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--ink);
+  }
+  .btn:hover{ border-color: var(--accent); }
+  .btn-primary{
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: var(--accent);
+    font-weight: 700;
+  }
+  .btn-sm{ padding: 4px 9px; font-size: 0.76rem; }
+
+  .samples-list{ display:flex; flex-direction:column; gap:10px; }
+
+  .sample-row{
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .sample-row-top{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sample-row-top input[type=file]{ flex: 1 1 auto; min-width: 0; }
+  .sample-filename{
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    word-break: break-all;
+  }
+  .sample-row-grid{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .sample-error{
+    font-size: 0.76rem;
+    color: var(--data-pink);
+    min-height: 1.1em;
+  }
+  .sample-error.note{ color: var(--muted); font-style: italic; }
+  .sample-error:empty{ min-height: 0; }
+
+  .checkbox-field{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+  }
+  .checkbox-field input{ width: auto; }
+
+  .plot-area{
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    background: var(--surface);
+    min-width: 0;
+  }
+  .subplots{
+    display: flex;
+    gap: 22px;
+    flex-wrap: wrap;
+  }
+  .subplot{
+    flex: 1 1 340px;
+    min-width: 280px;
+  }
+  .subplot h3{
+    margin: 0 0 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .chart-container svg{ width: 100%; height: auto; display: block; }
+  .chart-empty{
+    color: var(--muted);
+    font-size: 0.85rem;
+    padding: 44px 12px;
+    text-align: center;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+  }
+
+  .legend-row{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    font-size: 0.8rem;
+    color: var(--muted);
+    padding-top: 2px;
+    border-top: 1px solid var(--border);
+  }
+  .legend-row:empty{ display:none; border-top:none; }
+  .legend-item{ display:flex; align-items:center; gap:6px; }
+  .swatch{ width:12px; height:12px; border-radius:2px; display:inline-block; flex:none; }
+
+  .table-wrap-container.hidden{ display:none; }
+  .table-wrap{
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    max-height: 420px;
+    overflow-y: auto;
+  }
+  table{
+    border-collapse: collapse;
+    width: 100%;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 0.76rem;
+  }
+  th, td{
+    padding: 5px 10px;
+    border-bottom: 1px solid var(--border);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  th{ background: var(--surface-alt); position: sticky; top:0; }
+  td:first-child, th:first-child{ text-align: left; }
+  td:nth-child(2), th:nth-child(2){ text-align: left; }
+  .table-note{
+    font-size: 0.74rem;
+    color: var(--muted);
+    padding: 6px 10px;
+  }
+
+  .hidden{ display:none !important; }
+
+  .axis-label, .axis-title, .series-label{
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  }
+  .axis-label{ fill: var(--muted); font-size: 9px; }
+  .axis-title{ fill: var(--ink); font-size: 10px; font-weight: 500; }
+  .series-label{
+    font-size: 11px;
+    font-weight: 600;
+    paint-order: stroke;
+    stroke: var(--label-halo);
+    stroke-width: 3px;
+    stroke-linejoin: round;
+  }
+
+  footer.suite-note{
+    color: var(--muted);
+    font-size: 0.78rem;
+    text-align: center;
+    padding: 10px 0 0;
+  }
+
+  .chart-actions{ display:flex; gap:6px; margin-top:6px; }
+</style>
+<script src="figure-export.js" data-tool=""></script>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>CD Spectra Plotter</h1>
+  <p>Plot circular dichroism spectra and thermal melts.</p>
+</div>
+
+<div class="main">
+  <div id="proteins"></div>
+  <div id="emptyState" class="chart-empty hidden">No protein panels yet — click &ldquo;+ Add protein panel&rdquo; below to get started.</div>
+  <button type="button" id="addProteinBtn" class="btn btn-primary" style="align-self:flex-start;">+ Add protein panel</button>
+  <footer class="suite-note">Albanese Lab Plotting Tools &middot; all parsing happens in your browser, nothing is uploaded.</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- domain metadata ----------
+  var TYPE_META = {
+    spectrum: { label: 'Spectrum',                group: 'spectrum', colorVar: '--data-blue',   inline: '20 °C' },
+    pre:      { label: 'Pre-boil',                 group: 'spectrum', colorVar: '--data-blue',   inline: '20 °C' },
+    boil:     { label: 'Boil (95 °C)',        group: 'spectrum', colorVar: '--data-pink',   inline: '95 °C' },
+    post:     { label: 'Post-boil (refolded)',     group: 'spectrum', colorVar: '--data-teal',   inline: '95 → 20 °C' },
+    melt:     { label: 'Melt',                     group: 'melt',     colorVar: '--data-blue',   inline: '5 → 95 °C' }
+  };
+  var TYPE_ORDER = ['spectrum','pre','boil','post','melt'];
+  var X_CANDIDATES = ['nanometers','temperature_c','temperature_C'];
+
+  // ---------- state ----------
+  var proteinCounter = 0;
+  var sampleCounter = 0;
+  var proteinData = new Map(); // pid -> { blank: {text,fileName} | null, samples: Map(sid -> {text,fileName}) }
+  var renderTimers = {};
+
+  // ============================================================
+  // Parsing (ported from the lab's validated Python parser)
+  // ============================================================
+  function parseJasco(text){
+    try{
+      if(typeof text !== 'string' || !text.trim()){
+        return { ok:false, message: "This file looks empty." };
+      }
+      var xMatch = text.match(/XUNITS\s+(\w+)(?:\s*\[(\w+)\])?/);
+      if(!xMatch){
+        return { ok:false, message: "Couldn't read this file — is it a raw Jasco .txt export?" };
+      }
+      var xLabel = xMatch[1].toLowerCase() + (xMatch[2] ? ('_' + xMatch[2]) : '');
+
+      var yRe = /Y\d*UNITS\s+(\w+)(?:\s*\[(\w+)\])?/g;
+      var yLabels = [];
+      var m;
+      while((m = yRe.exec(text))){
+        var label;
+        if(m[2]) label = (m[1] + '_' + m[2]).toLowerCase();
+        else label = m[1].toLowerCase();
+        yLabels.push(label);
+      }
+      if(yLabels.length === 0){
+        return { ok:false, message: "Couldn't find any data columns in this file — is it a raw Jasco .txt export?" };
+      }
+
+      var lines = text.split(/\r?\n/);
+      var startIdx = -1;
+      for(var i=0;i<lines.length;i++){
+        if(lines[i].replace(/^\s+/,'').indexOf('XYDATA') === 0){ startIdx = i; break; }
+      }
+      if(startIdx === -1){
+        return { ok:false, message: "Couldn't find the data block in this file — is it a raw Jasco .txt export?" };
+      }
+
+      var rows = [];
+      for(var j=startIdx+1; j<lines.length; j++){
+        var line = lines[j];
+        if(line === undefined) break;
+        var fields = line.split('\t');
+        if(fields.length !== yLabels.length + 1) break;
+        var nums = new Array(fields.length);
+        var bad = false;
+        for(var k=0;k<fields.length;k++){
+          var v = parseFloat(fields[k]);
+          if(Number.isNaN(v)){ bad = true; break; }
+          nums[k] = v;
+        }
+        if(bad) break;
+        var row = {};
+        row[xLabel] = nums[0];
+        for(var y=0;y<yLabels.length;y++){ row[yLabels[y]] = nums[y+1]; }
+        rows.push(row);
+      }
+
+      if(rows.length === 0){
+        return { ok:false, message: "Found this file's header but no data rows after it — is it a complete export?" };
+      }
+      return { ok:true, xLabel: xLabel, yLabels: yLabels, rows: rows };
+    }catch(e){
+      return { ok:false, message: "Couldn't read this file — is it a raw Jasco .txt export?" };
+    }
+  }
+
+  function findXKey(rows){
+    if(!rows || !rows.length) return null;
+    var keys = Object.keys(rows[0]);
+    for(var i=0;i<X_CANDIDATES.length;i++){
+      if(keys.indexOf(X_CANDIDATES[i]) !== -1) return X_CANDIDATES[i];
+    }
+    return null;
+  }
+
+  function nearestValue(rows, xKey, targetX, valueKey){
+    var best = null, bestDiff = Infinity;
+    for(var i=0;i<rows.length;i++){
+      var d = Math.abs(rows[i][xKey] - targetX);
+      if(d < bestDiff){ bestDiff = d; best = rows[i]; }
+    }
+    return best ? best[valueKey] : null;
+  }
+
+  // opts: { numAmides, concUM, pathlengthCm, blankParsed (or null), applyBlank(bool) }
+  function processSample(parsed, opts){
+    var rows = parsed.rows;
+    if(!(rows.length && ('cd_mdeg' in rows[0]))){
+      return { ok:false, message: "This file doesn't seem to have a CD [mdeg] column — is it a raw Jasco .txt export?" };
+    }
+    var cdKey = 'cd_mdeg';
+    var blankNote = null;
+
+    if(opts.applyBlank){
+      if(opts.blankParsed && opts.blankParsed.ok){
+        var sampleXKey = findXKey(rows);
+        var blankRows = opts.blankParsed.rows;
+        var blankXKey = findXKey(blankRows);
+        if(sampleXKey && blankXKey && blankRows.length && ('cd_mdeg' in blankRows[0])){
+          for(var i=0;i<rows.length;i++){
+            var r = rows[i];
+            var nearestCd = nearestValue(blankRows, blankXKey, r[sampleXKey], 'cd_mdeg');
+            r.cd_mdeg_blank = (nearestCd === null) ? r.cd_mdeg : (r.cd_mdeg - nearestCd);
+          }
+          cdKey = 'cd_mdeg_blank';
+        } else {
+          blankNote = 'no blank subtracted for this file';
+        }
+      } else {
+        blankNote = 'no blank subtracted for this file';
+      }
+    }
+
+    var concM = (opts.concUM || 0) * 1e-6;
+    var meanResidueConc = (opts.numAmides || 0) * concM;
+    var canCompute = meanResidueConc > 0 && opts.pathlengthCm > 0;
+    for(var j=0;j<rows.length;j++){
+      var row = rows[j];
+      if(canCompute){
+        var cdDeg = row[cdKey] / 1000;
+        row.MRE = 100 * cdDeg / (opts.pathlengthCm * meanResidueConc);
+      } else {
+        row.MRE = NaN;
+      }
+    }
+    return { ok:true, rows: rows, xLabel: parsed.xLabel, blankNote: blankNote, canCompute: canCompute };
+  }
+
+  // ============================================================
+  // Small chart-math helpers
+  // ============================================================
+  function niceNum(range, round){
+    if(!(range > 0)) range = 1;
+    var exponent = Math.floor(Math.log10(range));
+    var fraction = range / Math.pow(10, exponent);
+    var niceFraction;
+    if(round){
+      if(fraction < 1.5) niceFraction = 1;
+      else if(fraction < 3) niceFraction = 2;
+      else if(fraction < 7) niceFraction = 5;
+      else niceFraction = 10;
+    } else {
+      if(fraction <= 1) niceFraction = 1;
+      else if(fraction <= 2) niceFraction = 2;
+      else if(fraction <= 5) niceFraction = 5;
+      else niceFraction = 10;
+    }
+    return niceFraction * Math.pow(10, exponent);
+  }
+
+  function niceTicks(min, max, count){
+    if(!Number.isFinite(min) || !Number.isFinite(max)){ min = 0; max = 1; }
+    if(min === max){ min -= 1; max += 1; }
+    var range = niceNum(max - min, false);
+    var step = niceNum(range / (count - 1), true);
+    var niceMin = Math.floor(min / step) * step;
+    var niceMax = Math.ceil(max / step) * step;
+    var ticks = [];
+    for(var v = niceMin; v <= niceMax + step * 0.5; v += step){
+      ticks.push(Math.round(v * 1e6) / 1e6);
+    }
+    return { ticks: ticks, domain: [niceMin, niceMax] };
+  }
+
+  function formatNum(n){
+    if(!Number.isFinite(n)) return '';
+    var a = Math.abs(n);
+    if(a >= 1000) return String(Math.round(n));
+    if(a >= 10) return n.toFixed(1);
+    if(a === 0) return '0';
+    return n.toFixed(2);
+  }
+
+  var SVG_NS = 'http://www.w3.org/2000/svg';
+  function svgEl(tag, attrs){
+    var e = document.createElementNS(SVG_NS, tag);
+    for(var k in attrs){ if(attrs.hasOwnProperty(k)) e.setAttribute(k, attrs[k]); }
+    return e;
+  }
+
+  // ============================================================
+  // Chart renderer: hand-drawn inline SVG
+  // opts: { series:[{points:[{x,y}], colorVar, label}], xDomain, xTicks,
+  //         yMin, yMax, xTitle, yTitle, refZero, shade, emptyMessage }
+  // ============================================================
+  function renderChart(container, opts){
+    container.innerHTML = '';
+    var hasData = opts.series && opts.series.some(function(s){ return s.points.length > 0; });
+    if(!hasData){
+      var p = document.createElement('div');
+      p.className = 'chart-empty';
+      p.textContent = opts.emptyMessage || 'No data yet.';
+      container.appendChild(p);
+      return;
+    }
+
+    var W = 480, H = 340, padL = 58, padR = 20, padT = 18, padB = 46;
+
+    var xDomain = opts.xDomain;
+    var xTicksArr = opts.xTicks;
+
+    var yInfo = niceTicks(opts.yMin, opts.yMax, 5);
+    var yDomain = yInfo.domain;
+    var yTicksArr = yInfo.ticks;
+
+    var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H, width:'100%', height:'100%', role:'img',
+      'aria-label': (opts.xTitle||'') + ' vs ' + (opts.yTitle||'') });
+
+    function xScale(x){ return padL + (x - xDomain[0]) / (xDomain[1] - xDomain[0]) * (W - padL - padR); }
+    function yScale(y){ return (H - padB) - (y - yDomain[0]) / (yDomain[1] - yDomain[0]) * (H - padB - padT); }
+
+    // shading (drawn first, under everything)
+    if(opts.shade){
+      var sx0 = xScale(opts.shade[0]), sx1 = xScale(opts.shade[1]);
+      svg.appendChild(svgEl('rect', {
+        x: Math.min(sx0, sx1), y: padT, width: Math.abs(sx1 - sx0), height: (H - padT - padB),
+        fill: 'var(--border)', opacity: '0.55'
+      }));
+    }
+
+    // zero reference line
+    if(opts.refZero && yDomain[0] < 0 && yDomain[1] > 0){
+      var y0 = yScale(0);
+      svg.appendChild(svgEl('line', {
+        x1: padL, y1: y0, x2: W - padR, y2: y0,
+        stroke: 'var(--muted)', 'stroke-width': 1, 'stroke-dasharray': '4 3'
+      }));
+    }
+
+    // axes
+    svg.appendChild(svgEl('line', { x1:padL, y1:H-padB, x2:W-padR, y2:H-padB, stroke:'var(--muted)', 'stroke-width':1 }));
+    svg.appendChild(svgEl('line', { x1:padL, y1:padT, x2:padL, y2:H-padB, stroke:'var(--muted)', 'stroke-width':1 }));
+
+    // x ticks
+    xTicksArr.forEach(function(t){
+      var x = xScale(t);
+      if(x < padL - 0.5 || x > W - padR + 0.5) return;
+      svg.appendChild(svgEl('line', { x1:x, y1:H-padB, x2:x, y2:H-padB+5, stroke:'var(--muted)', 'stroke-width':1 }));
+      var tx = svgEl('text', { x:x, y:H-padB+17, 'text-anchor':'middle', class:'axis-label' });
+      tx.textContent = formatNum(t);
+      svg.appendChild(tx);
+    });
+    var xt = svgEl('text', { x:(padL+W-padR)/2, y:H-6, 'text-anchor':'middle', class:'axis-title' });
+    xt.textContent = opts.xTitle || '';
+    svg.appendChild(xt);
+
+    // y ticks
+    yTicksArr.forEach(function(t){
+      var y = yScale(t);
+      if(y < padT - 0.5 || y > H - padB + 0.5) return;
+      svg.appendChild(svgEl('line', { x1:padL-5, y1:y, x2:padL, y2:y, stroke:'var(--muted)', 'stroke-width':1 }));
+      var ty = svgEl('text', { x:padL-8, y:y+3, 'text-anchor':'end', class:'axis-label' });
+      ty.textContent = formatNum(t);
+      svg.appendChild(ty);
+    });
+    var ytMidY = (padT + H - padB) / 2;
+    var yt = svgEl('text', { x:12, y:ytMidY, 'text-anchor':'middle', class:'axis-title',
+      transform: 'rotate(-90 12 ' + ytMidY + ')' });
+    yt.textContent = opts.yTitle || '';
+    svg.appendChild(yt);
+
+    // series
+    opts.series.forEach(function(s){
+      if(!s.points.length) return;
+      var d = '';
+      s.points.forEach(function(pt, idx){
+        d += (idx === 0 ? 'M' : 'L') + xScale(pt.x).toFixed(2) + ' ' + yScale(pt.y).toFixed(2) + ' ';
+      });
+      svg.appendChild(svgEl('path', {
+        d: d.trim(), fill:'none', stroke: 'var(' + s.colorVar + ')',
+        'stroke-width': 3, 'stroke-linejoin':'round', 'stroke-linecap':'round'
+      }));
+
+      if(s.label){
+        var last = s.points[s.points.length - 1];
+        var lx = xScale(last.x);
+        var ly = yScale(last.y) - 8 - (s.labelOffset || 0);
+        lx = Math.min(Math.max(lx, padL + 4), W - padR - 4);
+        ly = Math.min(Math.max(ly, padT + 10), H - padB - 4);
+        var lbl = svgEl('text', { x:lx, y:ly, 'text-anchor':'end', class:'series-label', fill:'var(' + s.colorVar + ')' });
+        lbl.textContent = s.label;
+        svg.appendChild(lbl);
+      }
+    });
+
+    container.appendChild(svg);
+  }
+
+  // ============================================================
+  // DOM templates
+  // ============================================================
+  function typeOptionsHTML(){
+    return TYPE_ORDER.map(function(k){
+      return '<option value="' + k + '">' + TYPE_META[k].label + '</option>';
+    }).join('');
+  }
+
+  function sampleRowTemplate(sid){
+    return (
+      '<div class="sample-row" data-sample-id="' + sid + '">' +
+        '<div class="sample-row-top">' +
+          '<input type="file" class="sample-file" accept=".txt,.csv,text/plain" aria-label="Sample file">' +
+          '<button type="button" class="btn btn-sm remove-sample" title="Remove this sample file">×</button>' +
+        '</div>' +
+        '<div class="sample-filename"></div>' +
+        '<div class="sample-row-grid">' +
+          '<div class="field"><span class="field-label">Type</span><select class="sample-type">' + typeOptionsHTML() + '</select></div>' +
+          '<div class="field"><span class="field-label">Amide bonds</span><input type="number" class="sample-amides" min="0" step="1" placeholder="e.g. 150"></div>' +
+          '<div class="field"><span class="field-label">Conc. (µM)</span><input type="number" class="sample-conc" min="0" step="any" placeholder="e.g. 10"></div>' +
+          '<div class="field"><span class="field-label">Pathlength (cm)</span><input type="number" class="sample-pathlength" min="0" step="any" value="0.1"></div>' +
+        '</div>' +
+        '<div class="sample-error"></div>' +
+      '</div>'
+    );
+  }
+
+  function proteinPanelTemplate(pid, n){
+    return (
+      '<section class="protein-panel" data-id="' + pid + '">' +
+        '<div class="protein-header">' +
+          '<input type="text" class="protein-label" value="Protein ' + n + '" aria-label="Protein label">' +
+          '<button type="button" class="btn btn-sm remove-protein-btn">Remove protein</button>' +
+        '</div>' +
+        '<div class="protein-panel-grid">' +
+          '<div class="control-panel">' +
+            '<div class="field">' +
+              '<span class="field-label">Blank / buffer file (optional)</span>' +
+              '<input type="file" class="blank-file" accept=".txt,.csv,text/plain">' +
+              '<div class="sample-filename blank-filename"></div>' +
+            '</div>' +
+            '<div class="field">' +
+              '<span class="field-label">Blank pathlength (cm)</span>' +
+              '<input type="number" class="blank-pathlength" min="0" step="any" value="0.1">' +
+            '</div>' +
+            '<div class="sample-error blank-error"></div>' +
+
+            '<div class="section-label">Sample files</div>' +
+            '<div class="samples-list" id="samples-' + pid + '"></div>' +
+            '<button type="button" class="btn add-sample-btn">+ Add another sample file</button>' +
+
+            '<label class="checkbox-field"><input type="checkbox" class="shade-toggle" checked> Shade high-voltage region</label>' +
+          '</div>' +
+          '<div class="plot-area">' +
+            '<div class="subplots">' +
+              '<div class="subplot"><h3>Spectrum</h3><div class="chart-container" id="spectrum-' + pid + '"></div><div class="chart-actions"><button type="button" class="btn btn-sm chart-save-btn" data-kind="spectrum" data-format="png">Save PNG</button><button type="button" class="btn btn-sm chart-save-btn" data-kind="spectrum" data-format="svg">Save SVG</button></div></div>' +
+              '<div class="subplot"><h3>Thermal melt</h3><div class="chart-container" id="melt-' + pid + '"></div><div class="chart-actions"><button type="button" class="btn btn-sm chart-save-btn" data-kind="melt" data-format="png">Save PNG</button><button type="button" class="btn btn-sm chart-save-btn" data-kind="melt" data-format="svg">Save SVG</button></div></div>' +
+            '</div>' +
+            '<div class="legend-row" id="legend-' + pid + '"></div>' +
+            '<button type="button" class="btn btn-sm toggle-table-btn">View data table</button>' +
+            '<div class="table-wrap-container hidden" id="tablewrap-' + pid + '">' +
+              '<div class="table-wrap" id="table-' + pid + '"></div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</section>'
+    );
+  }
+
+  // ============================================================
+  // Panel / row lifecycle
+  // ============================================================
+  function updateEmptyState(){
+    var container = document.getElementById('proteins');
+    var empty = document.getElementById('emptyState');
+    if(container.children.length === 0){ empty.classList.remove('hidden'); }
+    else { empty.classList.add('hidden'); }
+  }
+
+  function addSampleRow(pid){
+    var sid = 's' + (++sampleCounter);
+    var entry = proteinData.get(pid);
+    if(!entry) return;
+    entry.samples.set(sid, { text: null, fileName: null });
+    var list = document.getElementById('samples-' + pid);
+    if(list) list.insertAdjacentHTML('beforeend', sampleRowTemplate(sid));
+  }
+
+  function createProteinPanel(){
+    var pid = 'p' + (++proteinCounter);
+    proteinData.set(pid, { blank: null, samples: new Map() });
+    var container = document.getElementById('proteins');
+    container.insertAdjacentHTML('beforeend', proteinPanelTemplate(pid, proteinCounter));
+    for(var i=0;i<3;i++) addSampleRow(pid);
+    updateEmptyState();
+    scheduleRender(pid);
+  }
+
+  function scheduleRender(pid){
+    if(renderTimers[pid]) clearTimeout(renderTimers[pid]);
+    renderTimers[pid] = setTimeout(function(){
+      renderProtein(pid);
+    }, 120);
+  }
+
+  // ============================================================
+  // Main per-protein render
+  // ============================================================
+  function renderProtein(pid){
+    var panel = document.querySelector('.protein-panel[data-id="' + pid + '"]');
+    var entry = proteinData.get(pid);
+    if(!panel || !entry) return;
+
+    // --- blank ---
+    var blankPathInput = panel.querySelector('.blank-pathlength');
+    var blankPathlength = parseFloat(blankPathInput.value);
+    if(!(blankPathlength > 0)) blankPathlength = 0.1;
+    var blankErrorEl = panel.querySelector('.blank-error');
+    blankErrorEl.textContent = '';
+    var blankParsed = null;
+    if(entry.blank && entry.blank.text){
+      var bp = parseJasco(entry.blank.text);
+      if(!bp.ok){ blankErrorEl.textContent = bp.message; }
+      else { blankParsed = bp; }
+    }
+
+    var shadeChecked = panel.querySelector('.shade-toggle').checked;
+
+    var spectrumSeries = [];
+    var meltSeries = [];
+    var tableRows = [];
+    var typesPresent = [];
+    var shadeRegion = null;
+
+    var rows = panel.querySelectorAll('.sample-row');
+    rows.forEach(function(rowEl){
+      var sid = rowEl.dataset.sampleId;
+      var fileEntry = entry.samples.get(sid);
+      var errEl = rowEl.querySelector('.sample-error');
+      errEl.textContent = '';
+      errEl.classList.remove('note');
+
+      var typeKey = rowEl.querySelector('.sample-type').value;
+      var meta = TYPE_META[typeKey] || TYPE_META.spectrum;
+      var numAmides = parseFloat(rowEl.querySelector('.sample-amides').value) || 0;
+      var concUM = parseFloat(rowEl.querySelector('.sample-conc').value) || 0;
+      var pathlength = parseFloat(rowEl.querySelector('.sample-pathlength').value);
+      if(!(pathlength > 0)) pathlength = 0.1;
+
+      if(!fileEntry || !fileEntry.text) return; // nothing picked yet — silent, not an error
+
+      var parsed = parseJasco(fileEntry.text);
+      if(!parsed.ok){ errEl.textContent = parsed.message; return; }
+
+      if(numAmides <= 0 || concUM <= 0){
+        errEl.textContent = 'Enter the number of amide bonds and concentration to plot this sample.';
+        errEl.classList.add('note');
+        return;
+      }
+
+      var applyBlank = (meta.group === 'spectrum');
+      var processed = processSample(parsed, {
+        numAmides: numAmides, concUM: concUM, pathlengthCm: pathlength,
+        blankParsed: applyBlank ? blankParsed : null,
+        applyBlank: applyBlank
+      });
+      if(!processed.ok){ errEl.textContent = processed.message; return; }
+      if(applyBlank && processed.blankNote){
+        errEl.textContent = processed.blankNote;
+        errEl.classList.add('note');
+      }
+
+      if(typesPresent.indexOf(typeKey) === -1) typesPresent.push(typeKey);
+
+      if(meta.group === 'spectrum'){
+        // high-voltage shading detection (first qualifying sample wins)
+        if(shadeChecked && !shadeRegion){
+          var htKey = null;
+          for(var yi=0; yi<parsed.yLabels.length; yi++){
+            var lbl = parsed.yLabels[yi];
+            if(lbl.indexOf('ht') === 0 || lbl.indexOf('volt') !== -1){ htKey = lbl; break; }
+          }
+          if(htKey){
+            var maxHtX = null;
+            for(var ri=0; ri<processed.rows.length; ri++){
+              var rr = processed.rows[ri];
+              var xv = rr[parsed.xLabel];
+              if(xv >= 190 && xv <= 260 && rr[htKey] >= 600){
+                if(maxHtX === null || xv > maxHtX) maxHtX = xv;
+              }
+            }
+            if(maxHtX !== null) shadeRegion = [190, maxHtX];
+          }
+        }
+
+        var pts = [];
+        for(var si=0; si<processed.rows.length; si++){
+          var srow = processed.rows[si];
+          var x = srow[parsed.xLabel];
+          var yv = srow.MRE;
+          if(x >= 190 && x <= 260 && Number.isFinite(yv)){
+            pts.push({ x:x, y:yv });
+            tableRows.push({ panel:'Spectrum (nm)', type: meta.label, x:x, mre:yv });
+          }
+        }
+        pts.sort(function(a,b){ return a.x - b.x; });
+        var sameTypeCount = spectrumSeries.filter(function(s){ return s.typeKey === typeKey; }).length;
+        spectrumSeries.push({
+          typeKey: typeKey, points: pts, colorVar: meta.colorVar, label: meta.inline,
+          labelOffset: sameTypeCount * 12
+        });
+      } else {
+        var mxKey = findXKey(processed.rows) || parsed.xLabel;
+        var mpts = [];
+        for(var mi=0; mi<processed.rows.length; mi++){
+          var mrow = processed.rows[mi];
+          var mx = mrow[mxKey];
+          var my = mrow.MRE;
+          if(Number.isFinite(mx) && Number.isFinite(my)){
+            mpts.push({ x:mx, y:my });
+            tableRows.push({ panel:'Melt (°C)', type: meta.label, x:mx, mre:my });
+          }
+        }
+        mpts.sort(function(a,b){ return a.x - b.x; });
+        var sameMeltCount = meltSeries.length;
+        meltSeries.push({
+          typeKey: typeKey, points: mpts, colorVar: meta.colorVar, label: meta.inline,
+          labelOffset: sameMeltCount * 12
+        });
+      }
+    });
+
+    // --- spectrum chart ---
+    var spectrumContainer = document.getElementById('spectrum-' + pid);
+    var specYVals = [];
+    spectrumSeries.forEach(function(s){ s.points.forEach(function(p){ specYVals.push(p.y); }); });
+    renderChart(spectrumContainer, {
+      series: spectrumSeries,
+      xDomain: [190, 260],
+      xTicks: [190,200,210,220,230,240,250,260],
+      yMin: specYVals.length ? Math.min.apply(null, specYVals) : -1,
+      yMax: specYVals.length ? Math.max.apply(null, specYVals) : 1,
+      xTitle: 'Wavelength (nm)',
+      yTitle: 'MRE',
+      refZero: true,
+      shade: shadeRegion,
+      emptyMessage: 'Add spectrum, pre-boil, boil, or post-boil files to see this plot.'
+    });
+
+    // --- melt chart ---
+    var meltContainer = document.getElementById('melt-' + pid);
+    var meltXVals = [], meltYVals = [];
+    meltSeries.forEach(function(s){ s.points.forEach(function(p){ meltXVals.push(p.x); meltYVals.push(p.y); }); });
+    var meltXInfo = niceTicks(
+      meltXVals.length ? Math.min.apply(null, meltXVals) : 5,
+      meltXVals.length ? Math.max.apply(null, meltXVals) : 95,
+      5
+    );
+    renderChart(meltContainer, {
+      series: meltSeries,
+      xDomain: meltXInfo.domain,
+      xTicks: meltXInfo.ticks,
+      yMin: meltYVals.length ? Math.min.apply(null, meltYVals) : -1,
+      yMax: meltYVals.length ? Math.max.apply(null, meltYVals) : 1,
+      xTitle: 'Temperature (°C)',
+      yTitle: 'MRE',
+      refZero: false,
+      shade: null,
+      emptyMessage: 'Add melt files to see this plot.'
+    });
+
+    // --- legend ---
+    var legendEl = document.getElementById('legend-' + pid);
+    legendEl.innerHTML = '';
+    TYPE_ORDER.forEach(function(k){
+      if(typesPresent.indexOf(k) === -1) return;
+      var meta = TYPE_META[k];
+      var item = document.createElement('span');
+      item.className = 'legend-item';
+      var sw = document.createElement('span');
+      sw.className = 'swatch';
+      sw.style.background = 'var(' + meta.colorVar + ')';
+      var txt = document.createElement('span');
+      txt.textContent = meta.label;
+      item.appendChild(sw);
+      item.appendChild(txt);
+      legendEl.appendChild(item);
+    });
+
+    // --- data table ---
+    var tableEl = document.getElementById('table-' + pid);
+    var LIMIT = 3000;
+    if(tableRows.length === 0){
+      tableEl.innerHTML = '<div class="table-note">No plotted data yet.</div>';
+    } else {
+      var shown = tableRows.slice(0, LIMIT);
+      var html = '<table><thead><tr><th>Panel</th><th>Type</th><th>X</th><th>MRE</th></tr></thead><tbody>';
+      shown.forEach(function(r){
+        html += '<tr><td>' + r.panel + '</td><td>' + r.type + '</td><td>' + formatNum(r.x) + '</td><td>' + formatNum(r.mre) + '</td></tr>';
+      });
+      html += '</tbody></table>';
+      if(tableRows.length > LIMIT){
+        html += '<div class="table-note">Showing first ' + LIMIT + ' of ' + tableRows.length + ' rows.</div>';
+      }
+      tableEl.innerHTML = html;
+    }
+  }
+
+  // ============================================================
+  // Event delegation (handles dynamically added rows/panels)
+  // ============================================================
+  document.addEventListener('click', function(e){
+    var saveBtn = e.target.closest('.chart-save-btn');
+    if(saveBtn){
+      var panelEl = saveBtn.closest('.protein-panel');
+      var pidS = panelEl.dataset.id;
+      var kind = saveBtn.dataset.kind;
+      var svgNode = document.querySelector('#' + kind + '-' + pidS + ' svg');
+      if(!svgNode) return;
+      var lbl = panelEl.querySelector('.protein-label').value || 'protein';
+      var base = lbl + '_' + (kind === 'melt' ? 'thermal_melt' : 'CD_spectrum');
+      if(saveBtn.dataset.format === 'png') window.LabFigure.downloadPng(svgNode, base);
+      else window.LabFigure.downloadSvg(svgNode, base);
+      return;
+    }
+    if(e.target.closest('#addProteinBtn')){
+      createProteinPanel();
+      return;
+    }
+    var removeProteinBtn = e.target.closest('.remove-protein-btn');
+    if(removeProteinBtn){
+      var panel = removeProteinBtn.closest('.protein-panel');
+      var pid = panel.dataset.id;
+      delete renderTimers[pid];
+      proteinData.delete(pid);
+      panel.remove();
+      updateEmptyState();
+      return;
+    }
+    var addSampleBtn = e.target.closest('.add-sample-btn');
+    if(addSampleBtn){
+      var p2 = addSampleBtn.closest('.protein-panel');
+      addSampleRow(p2.dataset.id);
+      return;
+    }
+    var removeSampleBtn = e.target.closest('.remove-sample');
+    if(removeSampleBtn){
+      var row = removeSampleBtn.closest('.sample-row');
+      var panel2 = row.closest('.protein-panel');
+      var pid2 = panel2.dataset.id;
+      var entry2 = proteinData.get(pid2);
+      if(entry2) entry2.samples.delete(row.dataset.sampleId);
+      row.remove();
+      scheduleRender(pid2);
+      return;
+    }
+    var toggleTableBtn = e.target.closest('.toggle-table-btn');
+    if(toggleTableBtn){
+      var panel3 = toggleTableBtn.closest('.protein-panel');
+      var wrap = panel3.querySelector('.table-wrap-container');
+      wrap.classList.toggle('hidden');
+      toggleTableBtn.textContent = wrap.classList.contains('hidden') ? 'View data table' : 'Hide data table';
+      return;
+    }
+  });
+
+  document.addEventListener('input', function(e){
+    if(e.target.matches('.sample-type, .sample-amides, .sample-conc, .sample-pathlength, .blank-pathlength')){
+      var panel = e.target.closest('.protein-panel');
+      if(panel) scheduleRender(panel.dataset.id);
+    }
+  });
+
+  document.addEventListener('change', function(e){
+    if(e.target.matches('.shade-toggle')){
+      var p1 = e.target.closest('.protein-panel');
+      if(p1) scheduleRender(p1.dataset.id);
+      return;
+    }
+    if(e.target.matches('.sample-file')){
+      var row = e.target.closest('.sample-row');
+      var panel = row.closest('.protein-panel');
+      var pid = panel.dataset.id, sid = row.dataset.sampleId;
+      var entry = proteinData.get(pid);
+      var fnDiv = row.querySelector('.sample-filename');
+      var errEl = row.querySelector('.sample-error');
+      var f = e.target.files && e.target.files[0];
+      if(!f){
+        if(entry){ var se = entry.samples.get(sid); if(se){ se.text = null; se.fileName = null; } }
+        fnDiv.textContent = '';
+        scheduleRender(pid);
+        return;
+      }
+      fnDiv.textContent = f.name;
+      errEl.textContent = '';
+      errEl.classList.remove('note');
+      var reader = new FileReader();
+      reader.onload = function(){
+        var se2 = entry ? entry.samples.get(sid) : null;
+        if(se2){ se2.text = String(reader.result); se2.fileName = f.name; }
+        scheduleRender(pid);
+      };
+      reader.onerror = function(){
+        errEl.textContent = "Couldn't read this file — is it a raw Jasco .txt export?";
+        scheduleRender(pid);
+      };
+      reader.readAsText(f);
+      return;
+    }
+    if(e.target.matches('.blank-file')){
+      var panel2 = e.target.closest('.protein-panel');
+      var pid2 = panel2.dataset.id;
+      var entry2 = proteinData.get(pid2);
+      var fnDiv2 = panel2.querySelector('.blank-filename');
+      var errEl2 = panel2.querySelector('.blank-error');
+      var f2 = e.target.files && e.target.files[0];
+      if(!f2){
+        if(entry2) entry2.blank = null;
+        fnDiv2.textContent = '';
+        scheduleRender(pid2);
+        return;
+      }
+      fnDiv2.textContent = f2.name;
+      errEl2.textContent = '';
+      var reader2 = new FileReader();
+      reader2.onload = function(){
+        if(entry2) entry2.blank = { text: String(reader2.result), fileName: f2.name };
+        scheduleRender(pid2);
+      };
+      reader2.onerror = function(){
+        errEl2.textContent = "Couldn't read this file — is it a raw Jasco .txt export?";
+        scheduleRender(pid2);
+      };
+      reader2.readAsText(f2);
+      return;
+    }
+  });
+
+  // ---------- boot ----------
+  document.addEventListener('DOMContentLoaded', function(){
+    createProteinPanel();
+  });
+})();
+</script>
+
+</body>
+</html>

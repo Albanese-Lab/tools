@@ -1,0 +1,1085 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SEC Trace Plotter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #16211f;
+    --surface: #ffffff;
+    --surface-alt: #f2f5f4;
+    --border: #dbe3e1;
+    --muted: #5c6d69;
+    --accent: #009988;
+    --accent-ink: #ffffff;
+
+    --data-teal: #009988;
+    --data-orange: #E69F00;
+    --data-pink: #BB5566;
+    --data-blue: #004488;
+    --data-brown: #994F00;
+    --data-dimer: #BB5566;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #e7efed;
+      --surface: #141c1b;
+      --surface-alt: #1b2725;
+      --border: #2c3936;
+      --muted: #9fb0ac;
+      --accent: #2bcdb8;
+      --accent-ink: #06201c;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ink: #e7efed;
+    --surface: #141c1b;
+    --surface-alt: #1b2725;
+    --border: #2c3936;
+    --muted: #9fb0ac;
+    --accent: #2bcdb8;
+    --accent-ink: #06201c;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background: var(--surface);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    line-height: 1.4;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .topbar {
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    padding: 16px 20px;
+  }
+  .topbar-inner { max-width: 1400px; margin: 0 auto; }
+  .topbar h1 {
+    margin: 0 0 4px 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .topbar .subtitle {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.92rem;
+  }
+
+  .layout {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  .controls-panel {
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+  }
+
+  .controls-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .btn-add-panel {
+    width: 100%;
+    margin-top: 16px;
+  }
+
+  .panel-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .panel-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-label-input {
+    flex: 1;
+    font-weight: 600;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .field-label {
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .field-inline { flex: 1; }
+  .row-2 {
+    display: flex;
+    gap: 10px;
+  }
+
+  input[type="text"],
+  input[type="number"],
+  select {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.88rem;
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 9px;
+    width: 100%;
+  }
+  select { font-family: 'IBM Plex Sans', system-ui, sans-serif; }
+
+  input[type="file"] {
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-size: 0.82rem;
+    color: var(--ink);
+    width: 100%;
+  }
+
+  fieldset.field-group {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px 12px;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  fieldset.field-group > legend {
+    padding: 0 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .checkbox-label input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    accent-color: var(--accent);
+  }
+
+  .calib-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 4px;
+    border-top: 1px dashed var(--border);
+  }
+  .calib-body[hidden] { display: none; }
+
+  .samples {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .sample-row {
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: var(--surface-alt);
+  }
+  .sample-row-head {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .sample-swatch {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .sample-index {
+    font-size: 0.8rem;
+    font-weight: 600;
+    flex: 1;
+  }
+
+  .samples.calibration-off .mw-field { display: none; }
+
+  .btn {
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: 6px;
+    padding: 8px 14px;
+    cursor: pointer;
+    border: 1px solid transparent;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: var(--accent);
+  }
+  .btn-primary:hover { filter: brightness(1.06); }
+  .btn-secondary {
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { background: var(--surface-alt); }
+  .btn-remove-panel, .btn-remove-sample {
+    padding: 6px 10px;
+    font-size: 0.78rem;
+  }
+  .btn-add-sample { align-self: flex-start; }
+
+  .inline-status {
+    margin: 0;
+    font-size: 0.78rem;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  }
+  .status-info { color: var(--muted); }
+  .status-ok { color: var(--accent); }
+  .status-error { color: var(--data-pink); font-weight: 500; }
+
+  .plots {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+    gap: 20px;
+    align-content: start;
+  }
+
+  .plot-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .plot-card-header h2 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .plot-svg-wrap { width: 100%; }
+  .plot-svg-wrap svg { display: block; width: 100%; height: auto; }
+  .chart-actions { display: flex; gap: 6px; margin-top: 6px; }
+
+  .swatch-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .swatch-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .swatch-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .btn-toggle-table {
+    align-self: flex-start;
+  }
+
+  .table-wrap[hidden] { display: none; }
+  .table-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .table-set {
+    display: flex;
+    gap: 0;
+    min-width: max-content;
+  }
+  table.data-table {
+    border-collapse: collapse;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.78rem;
+    border-right: 1px solid var(--border);
+  }
+  table.data-table:last-child { border-right: none; }
+  table.data-table th, table.data-table td {
+    padding: 5px 10px;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  table.data-table thead tr:first-child th {
+    text-align: left;
+    background: var(--surface-alt);
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-weight: 600;
+  }
+  .th-swatch {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+  }
+  table.data-table tbody tr:nth-child(even) { background: var(--surface-alt); }
+
+  .muted-note {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin: 4px 0;
+  }
+
+  .privacy-note {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 20px 20px;
+    color: var(--muted);
+    font-size: 0.78rem;
+  }
+</style>
+<script src="figure-export.js" data-tool="SEC"></script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <h1>SEC Trace Plotter</h1>
+    <p class="subtitle">Overlay preparative size-exclusion chromatography traces.</p>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="controls-panel" aria-label="Plot controls">
+    <div class="controls-list" id="controls"></div>
+    <button type="button" id="addPanelBtn" class="btn btn-primary btn-add-panel">+ Add panel</button>
+  </section>
+
+  <section class="plots" id="plots" aria-label="Plots"></section>
+</main>
+
+<p class="privacy-note">All parsing happens locally in your browser. Files are never uploaded anywhere.</p>
+
+<script>
+(function () {
+  'use strict';
+
+  const COLOR_VARS = ['--data-teal', '--data-orange', '--data-pink', '--data-blue', '--data-brown'];
+
+  /** panel.id -> panel state */
+  const panels = new Map();
+  let panelSeq = 0;
+
+  // ---------- utility ----------
+
+  function clip(v, lo, hi) {
+    return Math.min(Math.max(v, lo), hi);
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function readFileAsText(file) {
+    return new Promise(function (resolve, reject) {
+      const reader = new FileReader();
+      reader.onload = function () { resolve(reader.result); };
+      reader.onerror = function () { reject(new Error('Could not read the file.')); };
+      reader.readAsText(file);
+    });
+  }
+
+  // ---------- parsing: .asc trace files ----------
+
+  function parseAscText(text) {
+    const lines = text.split(/\r\n|\r|\n/);
+    if (lines.length <= 3) {
+      return { points: [], error: 'This file has too few lines — it does not look like a Unicorn .asc export.' };
+    }
+    let dataLines = lines.slice(3);
+    if (dataLines.length > 0) dataLines = dataLines.slice(0, -1); // drop trailing incomplete row
+
+    const points = [];
+    for (let i = 0; i < dataLines.length; i++) {
+      const line = dataLines[i];
+      if (line.trim() === '') continue;
+      const fields = line.split('\t');
+      if (fields.length < 2) continue;
+      const mL = parseFloat(fields[0]);
+      const mAU = parseFloat(fields[1]);
+      if (!Number.isFinite(mL) || !Number.isFinite(mAU)) continue;
+      points.push({ mL: mL, mAU: mAU });
+    }
+
+    if (points.length === 0) {
+      return { points: [], error: 'No numeric mL / mAU rows could be parsed from this file.' };
+    }
+
+    let min = Infinity, max = -Infinity;
+    for (let i = 0; i < points.length; i++) {
+      if (points[i].mAU < min) min = points[i].mAU;
+      if (points[i].mAU > max) max = points[i].mAU;
+    }
+    const range = max - min;
+    for (let i = 0; i < points.length; i++) {
+      points[i].norm = range === 0 ? 0 : (points[i].mAU - min) / range;
+    }
+    points.sort(function (a, b) { return a.mL - b.mL; });
+
+    return { points: points, error: null };
+  }
+
+  // ---------- parsing: calibration csv ----------
+
+  function parseCalibrationCsvText(text) {
+    const lines = text.split(/\r\n|\r|\n/).filter(function (l) { return l.trim() !== ''; });
+    if (lines.length < 2) {
+      return { rows: [], error: 'This calibration file needs a header row plus at least one data row.' };
+    }
+    const header = lines[0].split(',').map(function (h) { return h.trim().toLowerCase(); });
+    const idxMr = header.indexOf('mr');
+    const idxKav = header.indexOf('kav');
+    const idxLog = header.indexOf('log_mr');
+    if (idxMr === -1 || idxKav === -1 || idxLog === -1) {
+      return { rows: [], error: 'Expected columns named Mr, Kav, and log_Mr in the calibration file header.' };
+    }
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+      const fields = lines[i].split(',');
+      const Mr = parseFloat(fields[idxMr]);
+      const Kav = parseFloat(fields[idxKav]);
+      const log_Mr = parseFloat(fields[idxLog]);
+      if (!Number.isFinite(Mr) || !Number.isFinite(Kav) || !Number.isFinite(log_Mr)) continue;
+      rows.push({ Mr: Mr, Kav: Kav, log_Mr: log_Mr });
+    }
+    if (rows.length === 0) {
+      return { rows: [], error: 'No numeric calibration rows could be parsed from this file.' };
+    }
+    return { rows: rows, error: null };
+  }
+
+  function fitCalibration(rows, columnType) {
+    const range = columnType === 'SEC_75' ? [1000, 70000] : [5000, 600000];
+    const filtered = rows.filter(function (r) { return r.Mr > range[0] && r.Mr < range[1]; });
+    if (filtered.length < 2) {
+      const label = columnType === 'SEC_75' ? '1,000–70,000' : '5,000–600,000';
+      return { fit: null, error: 'Fewer than 2 calibration points fall in the expected ' + label + ' Da range for this column.' };
+    }
+    const n = filtered.length;
+    const xs = filtered.map(function (r) { return r.Kav; });
+    const ys = filtered.map(function (r) { return r.log_Mr; });
+    const xMean = xs.reduce(function (a, b) { return a + b; }, 0) / n;
+    const yMean = ys.reduce(function (a, b) { return a + b; }, 0) / n;
+    let Sxx = 0, Sxy = 0;
+    for (let i = 0; i < n; i++) {
+      Sxx += (xs[i] - xMean) * (xs[i] - xMean);
+      Sxy += (xs[i] - xMean) * (ys[i] - yMean);
+    }
+    if (Sxx === 0) {
+      return { fit: null, error: 'Calibration Kav values have no spread — a line cannot be fit.' };
+    }
+    const slope = Sxy / Sxx;
+    const intercept = yMean - slope * xMean;
+    let sse = 0;
+    for (let i = 0; i < n; i++) {
+      const pred = intercept + slope * xs[i];
+      sse += (ys[i] - pred) * (ys[i] - pred);
+    }
+    const s = n > 2 ? Math.sqrt(sse / (n - 2)) : 0;
+    const fit = {
+      slope: slope, intercept: intercept, n: n, s: s, Sxx: Sxx, kavMean: xMean,
+      kavMin: Math.min.apply(null, xs), kavMax: Math.max.apply(null, xs),
+      logMrMin: Math.min.apply(null, ys), logMrMax: Math.max.apply(null, ys),
+      v0: 41, vt: 120
+    };
+    return { fit: fit, error: null };
+  }
+
+  function predictWindow(mw, fit) {
+    if (!fit || !Number.isFinite(mw) || mw <= 0) return null;
+    const log_mr = clip(Math.log10(mw), fit.logMrMin, fit.logMrMax);
+    const kavPoint = clip((log_mr - fit.intercept) / fit.slope, fit.kavMin, fit.kavMax);
+    const elutionPoint = clip(kavPoint * (fit.vt - fit.v0) + fit.v0, fit.v0, fit.vt);
+    let low = elutionPoint, high = elutionPoint;
+    if (fit.Sxx > 0 && fit.n > 2 && Math.abs(fit.slope) > 1e-9) {
+      const t = 1.96;
+      const halfLogMr = t * fit.s * Math.sqrt(1 + 1 / fit.n + ((kavPoint - fit.kavMean) * (kavPoint - fit.kavMean)) / fit.Sxx);
+      const halfKav = halfLogMr / Math.abs(fit.slope);
+      const kavLow = clip(kavPoint - halfKav, fit.kavMin, fit.kavMax);
+      const kavHigh = clip(kavPoint + halfKav, fit.kavMin, fit.kavMax);
+      low = clip(kavLow * (fit.vt - fit.v0) + fit.v0, fit.v0, fit.vt);
+      high = clip(kavHigh * (fit.vt - fit.v0) + fit.v0, fit.v0, fit.vt);
+    }
+    if (low > high) { const tmp = low; low = high; high = tmp; }
+    return { point: elutionPoint, low: low, high: high };
+  }
+
+  // ---------- panel model ----------
+
+  function addPanel() {
+    const id = ++panelSeq;
+    const panel = {
+      id: id,
+      label: 'wdr5-gs-cbx7',
+      columnType: 'SEC_200',
+      calibrationEnabled: false,
+      showDimer: true,
+      calibFileName: '',
+      calibRows: null,
+      calibFit: null,
+      calibError: null,
+      xMin: null,
+      xMax: null,
+      sampleSeq: 0,
+      samples: []
+    };
+    panels.set(id, panel);
+    buildPanelDOM(panel);
+    for (let i = 0; i < 3; i++) addSample(panel);
+    renderPlot(panel);
+  }
+
+  function buildPanelDOM(panel) {
+    const controlsList = document.getElementById('controls');
+    const controlHtml =
+      '<div class="panel-card" id="control-' + panel.id + '" data-panel-id="' + panel.id + '">' +
+        '<div class="panel-card-header">' +
+          '<input type="text" class="panel-label-input" data-role="label" value="' + escapeHtml(panel.label) + '" aria-label="Panel label">' +
+          '<button type="button" class="btn btn-secondary btn-remove-panel" data-role="remove-panel">Remove panel</button>' +
+        '</div>' +
+        '<label class="field">' +
+          '<span class="field-label">Column type</span>' +
+          '<select data-role="columnType">' +
+            '<option value="SEC_200">Superdex 200 (SEC_200)</option>' +
+            '<option value="SEC_75">Superdex 75 (SEC_75)</option>' +
+          '</select>' +
+        '</label>' +
+        '<fieldset class="field-group">' +
+          '<legend>X-axis window (mL) — optional</legend>' +
+          '<div class="row-2">' +
+            '<label class="field field-inline"><span class="field-label">Min</span><input type="number" data-role="xmin" placeholder="auto" step="any"></label>' +
+            '<label class="field field-inline"><span class="field-label">Max</span><input type="number" data-role="xmax" placeholder="auto" step="any"></label>' +
+          '</div>' +
+        '</fieldset>' +
+        '<fieldset class="field-group">' +
+          '<legend><label class="checkbox-label"><input type="checkbox" data-role="calib-enable"> Show predicted monomer/dimer window</label></legend>' +
+          '<div class="calib-body" data-role="calib-body" hidden>' +
+            '<label class="field"><span class="field-label">Calibration CSV (Mr, Kav, log_Mr)</span><input type="file" accept=".csv,text/csv" data-role="calib-file"></label>' +
+            '<label class="checkbox-label"><input type="checkbox" data-role="calib-dimer" checked> Show dimer too</label>' +
+            '<p class="inline-status" data-role="calib-status"></p>' +
+          '</div>' +
+        '</fieldset>' +
+        '<fieldset class="field-group">' +
+          '<legend>Sample overlay traces</legend>' +
+          '<div class="samples" data-role="samples"></div>' +
+          '<button type="button" class="btn btn-primary btn-add-sample" data-role="add-sample">+ Add another sample</button>' +
+        '</fieldset>' +
+      '</div>';
+    controlsList.insertAdjacentHTML('beforeend', controlHtml);
+
+    const plotsList = document.getElementById('plots');
+    const plotHtml =
+      '<div class="plot-card" id="plot-' + panel.id + '" data-panel-id="' + panel.id + '">' +
+        '<div class="plot-card-header"><h2 data-role="plot-title">' + escapeHtml(panel.label) + '</h2></div>' +
+        '<div class="plot-svg-wrap" id="chart-' + panel.id + '" data-role="svg-wrap"></div>' +
+        '<div class="chart-actions"><button type="button" class="btn btn-secondary chart-save-btn" data-target="chart-' + panel.id + '" data-format="png">Save PNG</button><button type="button" class="btn btn-secondary chart-save-btn" data-target="chart-' + panel.id + '" data-format="svg">Save SVG</button></div>' +
+        '<div class="swatch-row" data-role="swatch-row"></div>' +
+        '<button type="button" class="btn btn-secondary btn-toggle-table" data-role="toggle-table">View data table</button>' +
+        '<div class="table-wrap" data-role="table-wrap" hidden></div>' +
+      '</div>';
+    plotsList.insertAdjacentHTML('beforeend', plotHtml);
+  }
+
+  function removePanel(id) {
+    panels.delete(id);
+    const c = document.getElementById('control-' + id);
+    if (c) c.remove();
+    const p = document.getElementById('plot-' + id);
+    if (p) p.remove();
+  }
+
+  function addSample(panel) {
+    const sid = ++panel.sampleSeq;
+    const sample = { id: sid, fileName: '', label: '', mw: null, points: null, error: null };
+    panel.samples.push(sample);
+    const container = document.querySelector('#control-' + panel.id + ' [data-role="samples"]');
+    const rowHtml =
+      '<div class="sample-row" data-sample-id="' + sid + '">' +
+        '<div class="sample-row-head">' +
+          '<span class="sample-swatch"></span>' +
+          '<span class="sample-index"></span>' +
+          '<button type="button" class="btn btn-secondary btn-remove-sample" data-role="remove-sample">Remove</button>' +
+        '</div>' +
+        '<label class="field"><span class="field-label">Trace file (.asc)</span><input type="file" accept=".asc,.txt,text/plain" data-role="sample-file"></label>' +
+        '<label class="field"><span class="field-label">Sample label</span><input type="text" data-role="sample-label" placeholder="e.g. apo"></label>' +
+        '<label class="field mw-field"><span class="field-label">MW (g/mol)</span><input type="number" data-role="sample-mw" placeholder="e.g. 45000" min="0" step="any"></label>' +
+        '<p class="inline-status" data-role="sample-status"></p>' +
+      '</div>';
+    container.insertAdjacentHTML('beforeend', rowHtml);
+    refreshSampleRowsUI(panel);
+  }
+
+  function removeSample(panel, sid) {
+    panel.samples = panel.samples.filter(function (s) { return s.id !== sid; });
+    const row = document.querySelector('#control-' + panel.id + ' [data-sample-id="' + sid + '"]');
+    if (row) row.remove();
+    refreshSampleRowsUI(panel);
+    renderPlot(panel);
+  }
+
+  function refreshSampleRowsUI(panel) {
+    const container = document.querySelector('#control-' + panel.id + ' [data-role="samples"]');
+    if (!container) return;
+    panel.samples.forEach(function (s, i) {
+      const row = container.querySelector('[data-sample-id="' + s.id + '"]');
+      if (!row) return;
+      const colorVar = COLOR_VARS[i % COLOR_VARS.length];
+      const swatch = row.querySelector('.sample-swatch');
+      const idx = row.querySelector('.sample-index');
+      if (swatch) swatch.style.background = 'var(' + colorVar + ')';
+      if (idx) idx.textContent = 'Sample ' + (i + 1);
+    });
+  }
+
+  function updatePlotTitle(panel) {
+    const el = document.querySelector('#plot-' + panel.id + ' [data-role="plot-title"]');
+    if (el) el.textContent = panel.label && panel.label.trim() ? panel.label : ('Panel ' + panel.id);
+  }
+
+  // ---------- file handlers ----------
+
+  function handleSampleFile(panel, sample, file, statusEl) {
+    sample.fileName = file.name;
+    sample.error = null;
+    sample.points = null;
+    statusEl.textContent = 'Parsing ' + file.name + '…';
+    statusEl.className = 'inline-status status-info';
+    readFileAsText(file).then(function (text) {
+      const result = parseAscText(text);
+      if (result.error) {
+        sample.error = result.error;
+        statusEl.textContent = result.error;
+        statusEl.className = 'inline-status status-error';
+      } else {
+        sample.points = result.points;
+        statusEl.textContent = 'Loaded ' + result.points.length + ' points from ' + file.name + '.';
+        statusEl.className = 'inline-status status-ok';
+      }
+      renderPlot(panel);
+    }).catch(function () {
+      sample.error = 'Could not read this file. Please check it is a valid .asc export.';
+      statusEl.textContent = sample.error;
+      statusEl.className = 'inline-status status-error';
+      renderPlot(panel);
+    });
+  }
+
+  function handleCalibFile(panel, file, statusEl) {
+    panel.calibFileName = file.name;
+    panel.calibError = null;
+    panel.calibFit = null;
+    panel.calibRows = null;
+    statusEl.textContent = 'Parsing ' + file.name + '…';
+    statusEl.className = 'inline-status status-info';
+    readFileAsText(file).then(function (text) {
+      const result = parseCalibrationCsvText(text);
+      if (result.error) {
+        panel.calibError = result.error;
+        statusEl.textContent = result.error;
+        statusEl.className = 'inline-status status-error';
+        renderPlot(panel);
+        return;
+      }
+      panel.calibRows = result.rows;
+      refitCalibration(panel);
+    }).catch(function () {
+      panel.calibError = 'Could not read this calibration file.';
+      statusEl.textContent = panel.calibError;
+      statusEl.className = 'inline-status status-error';
+      renderPlot(panel);
+    });
+  }
+
+  function refitCalibration(panel) {
+    const statusEl = document.querySelector('#control-' + panel.id + ' [data-role="calib-status"]');
+    if (!panel.calibRows) return;
+    const result = fitCalibration(panel.calibRows, panel.columnType);
+    if (result.error) {
+      panel.calibFit = null;
+      panel.calibError = result.error;
+      if (statusEl) { statusEl.textContent = result.error; statusEl.className = 'inline-status status-error'; }
+    } else {
+      panel.calibFit = result.fit;
+      panel.calibError = null;
+      if (statusEl) {
+        statusEl.textContent = 'Calibration fit using ' + result.fit.n + ' points from ' + panel.calibFileName + '.';
+        statusEl.className = 'inline-status status-ok';
+      }
+    }
+    renderPlot(panel);
+  }
+
+  // ---------- plotting ----------
+
+  function textWithHalo(x, y, text, colorExpr, anchor, rotate) {
+    const rot = rotate ? ' transform="rotate(-90 ' + x + ' ' + y + ')"' : '';
+    return '<text x="' + x + '" y="' + y + '" text-anchor="' + anchor + '"' + rot +
+      ' font-size="12" font-family="&quot;IBM Plex Sans&quot;,system-ui,sans-serif" font-weight="600"' +
+      ' paint-order="stroke" stroke="var(--surface)" stroke-width="3" fill="' + colorExpr + '">' +
+      escapeHtml(text) + '</text>';
+  }
+
+  function windowMarkup(win, colorExpr, label, xScale, xMin, xMax, yTop, yBottom, rightEdge) {
+    if (win.high < xMin || win.low > xMax) return '';
+    const lowX = xScale(Math.max(win.low, xMin));
+    const highX = xScale(Math.min(win.high, xMax));
+    const rectX = Math.min(lowX, highX);
+    const rectW = Math.max(Math.abs(highX - lowX), 0.5);
+    let out = '';
+    out += '<rect x="' + rectX + '" y="' + yTop + '" width="' + rectW + '" height="' + (yBottom - yTop) + '" fill="' + colorExpr + '" opacity="0.13"/>';
+    out += '<line x1="' + lowX + '" y1="' + yTop + '" x2="' + lowX + '" y2="' + yBottom + '" stroke="' + colorExpr + '" stroke-width="1.5" stroke-dasharray="5,4"/>';
+    out += '<line x1="' + highX + '" y1="' + yTop + '" x2="' + highX + '" y2="' + yBottom + '" stroke="' + colorExpr + '" stroke-width="1.5" stroke-dasharray="5,4"/>';
+    const lx = Math.min(Math.max(highX, lowX) + 4, rightEdge);
+    out += textWithHalo(lx, yBottom - 6, label, colorExpr, 'start', true);
+    return out;
+  }
+
+  function emptyStateSVG() {
+    return '<svg viewBox="0 0 760 440" style="width:100%;height:auto;">' +
+      '<text x="380" y="208" text-anchor="middle" font-size="15" fill="var(--muted)" font-family="&quot;IBM Plex Sans&quot;,system-ui,sans-serif">No trace files loaded yet.</text>' +
+      '<text x="380" y="232" text-anchor="middle" font-size="13" fill="var(--muted)" font-family="&quot;IBM Plex Sans&quot;,system-ui,sans-serif">Add a .asc file to a sample slot on the left to see the plot.</text>' +
+      '</svg>';
+  }
+
+  function renderPlot(panel) {
+    const wrap = document.querySelector('#plot-' + panel.id + ' [data-role="svg-wrap"]');
+    const swatchRow = document.querySelector('#plot-' + panel.id + ' [data-role="swatch-row"]');
+    if (!wrap) return;
+
+    const indexed = panel.samples
+      .map(function (s, i) { return { s: s, i: i }; })
+      .filter(function (o) { return o.s.points && o.s.points.length > 0; });
+
+    if (indexed.length === 0) {
+      wrap.innerHTML = emptyStateSVG();
+      if (swatchRow) swatchRow.innerHTML = '';
+      return;
+    }
+
+    let xMin, xMax;
+    if (Number.isFinite(panel.xMin) && Number.isFinite(panel.xMax) && panel.xMax > panel.xMin) {
+      xMin = panel.xMin; xMax = panel.xMax;
+    } else {
+      let lo = Infinity, hi = -Infinity;
+      indexed.forEach(function (o) {
+        o.s.points.forEach(function (p) {
+          if (p.mL < lo) lo = p.mL;
+          if (p.mL > hi) hi = p.mL;
+        });
+      });
+      xMin = lo - 1; xMax = hi + 1;
+    }
+    const yMin = 0, yMax = 1.05;
+
+    const W = 760, H = 440, ML = 56, MR = 24, MT = 18, MB = 50;
+    const plotW = W - ML - MR, plotH = H - MT - MB;
+    const xScale = function (v) { return ML + (v - xMin) / (xMax - xMin) * plotW; };
+    const yScale = function (v) { return MT + (1 - (v - yMin) / (yMax - yMin)) * plotH; };
+
+    let svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="SEC trace plot for ' +
+      escapeHtml(panel.label) + '" style="width:100%;height:auto;">';
+
+    // axes
+    svg += '<line x1="' + ML + '" y1="' + MT + '" x2="' + ML + '" y2="' + (H - MB) + '" stroke="var(--border)" stroke-width="1.5"/>';
+    svg += '<line x1="' + ML + '" y1="' + (H - MB) + '" x2="' + (W - MR) + '" y2="' + (H - MB) + '" stroke="var(--border)" stroke-width="1.5"/>';
+
+    const xTickCount = 6;
+    for (let i = 0; i <= xTickCount; i++) {
+      const v = xMin + (xMax - xMin) * i / xTickCount;
+      const x = xScale(v);
+      svg += '<line x1="' + x + '" y1="' + (H - MB) + '" x2="' + x + '" y2="' + (H - MB + 5) + '" stroke="var(--muted)" stroke-width="1"/>';
+      svg += '<text x="' + x + '" y="' + (H - MB + 18) + '" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="&quot;IBM Plex Mono&quot;,ui-monospace,monospace">' + v.toFixed(0) + '</text>';
+    }
+    [0, 0.25, 0.5, 0.75, 1.0].forEach(function (v) {
+      const y = yScale(v);
+      svg += '<line x1="' + (ML - 5) + '" y1="' + y + '" x2="' + ML + '" y2="' + y + '" stroke="var(--muted)" stroke-width="1"/>';
+      svg += '<text x="' + (ML - 9) + '" y="' + (y + 4) + '" text-anchor="end" font-size="11" fill="var(--muted)" font-family="&quot;IBM Plex Mono&quot;,ui-monospace,monospace">' + v.toFixed(2) + '</text>';
+    });
+
+    svg += '<text x="' + (ML + plotW / 2) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="12" fill="var(--ink)" font-family="&quot;IBM Plex Sans&quot;,system-ui,sans-serif">Volume (mL)</text>';
+    svg += '<text x="14" y="' + (MT + plotH / 2) + '" text-anchor="middle" font-size="12" fill="var(--ink)" font-family="&quot;IBM Plex Sans&quot;,system-ui,sans-serif" transform="rotate(-90 14 ' + (MT + plotH / 2) + ')">Norm. Abs. (mAU)</text>';
+
+    // calibration windows
+    if (panel.calibrationEnabled && panel.calibFit) {
+      indexed.forEach(function (o) {
+        const colorVar = 'var(' + COLOR_VARS[o.i % COLOR_VARS.length] + ')';
+        if (Number.isFinite(o.s.mw) && o.s.mw > 0) {
+          const win = predictWindow(o.s.mw, panel.calibFit);
+          if (win) svg += windowMarkup(win, colorVar, 'Monomer', xScale, xMin, xMax, MT, H - MB, W - MR - 2);
+          if (panel.showDimer) {
+            const winD = predictWindow(o.s.mw * 2, panel.calibFit);
+            if (winD) svg += windowMarkup(winD, 'var(--data-dimer)', 'Dimer', xScale, xMin, xMax, MT, H - MB, W - MR - 2);
+          }
+        }
+      });
+    }
+
+    // trace lines + end labels
+    let linesSvg = '', labelsSvg = '';
+    indexed.forEach(function (o) {
+      const colorVar = 'var(' + COLOR_VARS[o.i % COLOR_VARS.length] + ')';
+      const pts = o.s.points.filter(function (p) { return p.mL >= xMin && p.mL <= xMax; });
+      if (pts.length < 2) return;
+      let d = '';
+      for (let k = 0; k < pts.length; k++) {
+        const cmd = k === 0 ? 'M' : 'L';
+        d += cmd + xScale(pts[k].mL).toFixed(2) + ',' + yScale(Math.min(pts[k].norm, yMax)).toFixed(2) + ' ';
+      }
+      linesSvg += '<path d="' + d.trim() + '" fill="none" stroke="' + colorVar + '" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>';
+      const last = pts[pts.length - 1];
+      const lx = xScale(last.mL), ly = yScale(Math.min(last.norm, yMax));
+      const labelText = (o.s.label && o.s.label.trim()) ? o.s.label.trim() : ('Sample ' + (o.i + 1));
+      const anchor = lx > W - MR - 90 ? 'end' : 'start';
+      const lxAdj = anchor === 'end' ? lx - 6 : lx + 6;
+      labelsSvg += textWithHalo(lxAdj, ly - 4, labelText, colorVar, anchor, false);
+    });
+    svg += linesSvg + labelsSvg;
+    svg += '</svg>';
+    wrap.innerHTML = svg;
+
+    if (swatchRow) {
+      swatchRow.innerHTML = indexed.map(function (o) {
+        const colorVar = COLOR_VARS[o.i % COLOR_VARS.length];
+        const labelText = (o.s.label && o.s.label.trim()) ? o.s.label.trim() : ('Sample ' + (o.i + 1));
+        return '<span class="swatch-item"><span class="swatch-dot" style="background:var(' + colorVar + ')"></span>' + escapeHtml(labelText) + '</span>';
+      }).join('');
+    }
+  }
+
+  function buildTable(panel) {
+    const tableWrap = document.querySelector('#plot-' + panel.id + ' [data-role="table-wrap"]');
+    if (!tableWrap) return;
+    const indexed = panel.samples
+      .map(function (s, i) { return { s: s, i: i }; })
+      .filter(function (o) { return o.s.points && o.s.points.length > 0; });
+
+    if (indexed.length === 0) {
+      tableWrap.innerHTML = '<p class="muted-note">No sample data loaded yet.</p>';
+      return;
+    }
+
+    let html = '<div class="table-scroll"><div class="table-set">';
+    indexed.forEach(function (o) {
+      const colorVar = COLOR_VARS[o.i % COLOR_VARS.length];
+      const labelText = (o.s.label && o.s.label.trim()) ? o.s.label.trim() : ('Sample ' + (o.i + 1));
+      html += '<table class="data-table"><thead>' +
+        '<tr><th colspan="3"><span class="th-swatch" style="background:var(' + colorVar + ')"></span>' + escapeHtml(labelText) + '</th></tr>' +
+        '<tr><th>mL</th><th>mAU</th><th>Norm.</th></tr>' +
+        '</thead><tbody>';
+      o.s.points.forEach(function (p) {
+        html += '<tr><td>' + p.mL.toFixed(3) + '</td><td>' + p.mAU.toFixed(2) + '</td><td>' + p.norm.toFixed(4) + '</td></tr>';
+      });
+      html += '</tbody></table>';
+    });
+    html += '</div></div>';
+    tableWrap.innerHTML = html;
+  }
+
+  // ---------- chart export (PNG / SVG) ----------
+
+  function downloadChartAsSvg(svgEl, baseName){ window.LabFigure.downloadSvg(svgEl, baseName); }
+  function downloadChartAsPng(svgEl, baseName){ window.LabFigure.downloadPng(svgEl, baseName); }
+
+  // ---------- event delegation ----------
+
+  function getPanelId(el) {
+    const card = el.closest('[data-panel-id]');
+    return card ? Number(card.dataset.panelId) : null;
+  }
+  function getSampleId(el) {
+    const row = el.closest('[data-sample-id]');
+    return row ? Number(row.dataset.sampleId) : null;
+  }
+
+  document.getElementById('addPanelBtn').addEventListener('click', addPanel);
+
+  document.getElementById('controls').addEventListener('click', function (e) {
+    const target = e.target.closest('[data-role]');
+    if (!target) return;
+    const role = target.dataset.role;
+    const pid = getPanelId(target);
+    const panel = panels.get(pid);
+    if (!panel) return;
+    if (role === 'remove-panel') { removePanel(pid); return; }
+    if (role === 'add-sample') { addSample(panel); renderPlot(panel); return; }
+    if (role === 'remove-sample') { const sid = getSampleId(target); removeSample(panel, sid); return; }
+  });
+
+  document.getElementById('controls').addEventListener('input', function (e) {
+    const target = e.target;
+    const role = target.dataset.role;
+    if (!role) return;
+    const pid = getPanelId(target);
+    const panel = panels.get(pid);
+    if (!panel) return;
+
+    if (role === 'label') {
+      panel.label = target.value;
+      updatePlotTitle(panel);
+      renderPlot(panel);
+      return;
+    }
+    if (role === 'xmin') { panel.xMin = target.value === '' ? null : Number(target.value); renderPlot(panel); return; }
+    if (role === 'xmax') { panel.xMax = target.value === '' ? null : Number(target.value); renderPlot(panel); return; }
+    if (role === 'sample-label') {
+      const sid = getSampleId(target);
+      const s = panel.samples.find(function (x) { return x.id === sid; });
+      if (s) { s.label = target.value; renderPlot(panel); }
+      return;
+    }
+    if (role === 'sample-mw') {
+      const sid = getSampleId(target);
+      const s = panel.samples.find(function (x) { return x.id === sid; });
+      if (s) { s.mw = target.value === '' ? null : Number(target.value); renderPlot(panel); }
+      return;
+    }
+  });
+
+  document.getElementById('controls').addEventListener('change', function (e) {
+    const target = e.target;
+    const role = target.dataset.role;
+    if (!role) return;
+    const pid = getPanelId(target);
+    const panel = panels.get(pid);
+    if (!panel) return;
+
+    if (role === 'columnType') {
+      panel.columnType = target.value;
+      if (panel.calibRows) refitCalibration(panel);
+      renderPlot(panel);
+      return;
+    }
+    if (role === 'calib-enable') {
+      panel.calibrationEnabled = target.checked;
+      const body = document.querySelector('#control-' + panel.id + ' [data-role="calib-body"]');
+      if (body) body.hidden = !target.checked;
+      const samplesContainer = document.querySelector('#control-' + panel.id + ' [data-role="samples"]');
+      if (samplesContainer) samplesContainer.classList.toggle('calibration-off', !target.checked);
+      renderPlot(panel);
+      return;
+    }
+    if (role === 'calib-dimer') { panel.showDimer = target.checked; renderPlot(panel); return; }
+    if (role === 'calib-file') {
+      const file = target.files[0];
+      const statusEl = document.querySelector('#control-' + panel.id + ' [data-role="calib-status"]');
+      if (!file || !statusEl) return;
+      handleCalibFile(panel, file, statusEl);
+      return;
+    }
+    if (role === 'sample-file') {
+      const sid = getSampleId(target);
+      const sample = panel.samples.find(function (x) { return x.id === sid; });
+      const statusEl = document.querySelector('#control-' + panel.id + ' [data-sample-id="' + sid + '"] [data-role="sample-status"]');
+      const file = target.files[0];
+      if (!file || !sample || !statusEl) return;
+      handleSampleFile(panel, sample, file, statusEl);
+      return;
+    }
+  });
+
+  document.getElementById('plots').addEventListener('click', function (e) {
+    const saveBtn = e.target.closest('.chart-save-btn');
+    if (saveBtn) {
+      const targetId = saveBtn.dataset.target;
+      const container = document.getElementById(targetId);
+      const svgEl = container ? container.querySelector('svg') : null;
+      if (!svgEl) return;
+      const pid = getPanelId(saveBtn);
+      const panel = panels.get(pid);
+      const labelVal = (panel && panel.label && panel.label.trim()) ? panel.label.trim() : 'chart';
+      const chartKind = targetId.replace(/-[^-]+$/, '');
+      const base = labelVal + '_' + chartKind;
+      if (saveBtn.dataset.format === 'png') downloadChartAsPng(svgEl, base);
+      else downloadChartAsSvg(svgEl, base);
+      return;
+    }
+    const target = e.target.closest('[data-role]');
+    if (!target) return;
+    const role = target.dataset.role;
+    const pid = getPanelId(target);
+    const panel = panels.get(pid);
+    if (!panel) return;
+
+    if (role === 'toggle-table') {
+      const tableWrap = document.querySelector('#plot-' + panel.id + ' [data-role="table-wrap"]');
+      if (!tableWrap) return;
+      const isHidden = tableWrap.hasAttribute('hidden');
+      if (isHidden) {
+        buildTable(panel);
+        tableWrap.removeAttribute('hidden');
+        target.textContent = 'Hide data table';
+      } else {
+        tableWrap.setAttribute('hidden', '');
+        target.textContent = 'View data table';
+      }
+      return;
+    }
+  });
+
+  // ---------- init ----------
+  addPanel();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ITC Thermogram Plotter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #16211f;
+    --surface: #ffffff;
+    --surface-alt: #f2f5f4;
+    --border: #dbe3e1;
+    --muted: #5c6d69;
+    --accent: #009988;
+    --accent-ink: #ffffff;
+
+    --data-teal: #009988;
+    --data-orange: #E69F00;
+    --data-pink: #BB5566;
+    --data-blue: #004488;
+    --data-brown: #994F00;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #e7efed;
+      --surface: #141c1b;
+      --surface-alt: #1b2725;
+      --border: #2c3936;
+      --muted: #9fb0ac;
+      --accent: #2bcdb8;
+      --accent-ink: #06201c;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ink: #e7efed;
+    --surface: #141c1b;
+    --surface-alt: #1b2725;
+    --border: #2c3936;
+    --muted: #9fb0ac;
+    --accent: #2bcdb8;
+    --accent-ink: #06201c;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background: var(--surface);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    line-height: 1.45;
+  }
+
+  header.app-header {
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    background: var(--surface);
+  }
+
+  header.app-header h1 {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  header.app-header p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.86rem;
+  }
+
+  .suite-tag {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 20px;
+    padding: 20px;
+    align-items: start;
+  }
+
+  @media (max-width: 900px) {
+    .layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .control-panel {
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: sticky;
+    top: 20px;
+  }
+
+  @media (max-width: 900px) {
+    .control-panel { position: static; }
+  }
+
+  .format-note {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  .format-note strong { color: var(--ink); }
+
+  .format-note code {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    background: var(--surface-alt);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 0.92em;
+  }
+
+  .panel-editor {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .panel-editor-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .panel-editor-head h2 {
+    margin: 0;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  label.field-label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 500;
+    margin-bottom: 4px;
+    color: var(--ink);
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+  }
+
+  input[type="text"],
+  input[type="number"] {
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-size: 0.86rem;
+    padding: 7px 9px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--ink);
+    width: 100%;
+  }
+
+  input[type="number"] {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  input:focus-visible,
+  button:focus-visible,
+  input[type="file"]:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .sample-row {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: var(--surface-alt);
+  }
+
+  .sample-row-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+
+  .sample-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex: none;
+  }
+
+  .sample-row-label {
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  input[type="file"] {
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-size: 0.76rem;
+    color: var(--ink);
+    width: 100%;
+  }
+
+  input[type="file"]::file-selector-button {
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-size: 0.76rem;
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--ink);
+    margin-right: 8px;
+    cursor: pointer;
+  }
+
+  .file-status {
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  }
+
+  .file-status.ok { color: var(--accent); }
+
+  .file-error {
+    font-size: 0.72rem;
+    color: var(--data-pink);
+    background: color-mix(in srgb, var(--data-pink) 12%, var(--surface));
+    border: 1px solid var(--data-pink);
+    border-radius: 5px;
+    padding: 5px 7px;
+  }
+
+  button {
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--ink);
+  }
+
+  button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  button.small {
+    padding: 4px 8px;
+    font-size: 0.72rem;
+    font-weight: 500;
+  }
+
+  button.danger-outline {
+    color: var(--data-pink);
+    border-color: var(--data-pink);
+    background: var(--surface);
+  }
+
+  button:hover { filter: brightness(0.97); }
+
+  .add-sample-btn { align-self: flex-start; }
+
+  .add-panel-btn { width: 100%; }
+
+  .plot-area {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: flex-start;
+  }
+
+  .plot-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    flex: 1 1 460px;
+    min-width: 320px;
+    max-width: 640px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .plot-card-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+
+  .plot-card-sub {
+    font-size: 0.76rem;
+    color: var(--muted);
+  }
+
+  .plot-svg-wrap {
+    width: 100%;
+    background: var(--surface);
+  }
+
+  .plot-svg-wrap svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .empty-plot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 260px;
+    color: var(--muted);
+    font-size: 0.84rem;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    text-align: center;
+    padding: 16px;
+  }
+
+  .chart-actions { display: flex; gap: 6px; margin-top: 6px; }
+
+  .swatch-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    font-size: 0.76rem;
+    color: var(--muted);
+  }
+
+  .swatch-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .swatch-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex: none;
+  }
+
+  .table-toggle {
+    align-self: flex-start;
+    font-size: 0.76rem;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    max-height: 260px;
+    overflow-y: auto;
+  }
+
+  table.data-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 0.74rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  table.data-table th,
+  table.data-table td {
+    padding: 4px 8px;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  table.data-table th {
+    position: sticky;
+    top: 0;
+    background: var(--surface-alt);
+    text-align: right;
+    font-weight: 600;
+  }
+
+  table.data-table td:first-child,
+  table.data-table th:first-child {
+    text-align: left;
+  }
+
+  .axis-line { stroke: var(--muted); stroke-width: 1; }
+  .grid-line { stroke: var(--border); stroke-width: 1; }
+  .axis-text { fill: var(--muted); font-family: 'IBM Plex Sans', system-ui, sans-serif; }
+  .axis-title { fill: var(--ink); font-family: 'IBM Plex Sans', system-ui, sans-serif; font-weight: 500; }
+  .series-label-text { font-family: 'IBM Plex Sans', system-ui, sans-serif; font-weight: 600; }
+  .temp-label-text { font-family: 'IBM Plex Sans', system-ui, sans-serif; font-weight: 700; fill: var(--ink); }
+
+  footer.app-footer {
+    padding: 16px 24px 28px;
+    color: var(--muted);
+    font-size: 0.74rem;
+  }
+</style>
+<script src="figure-export.js" data-tool="ITC"></script>
+</head>
+<body>
+
+<header class="app-header">
+  <span class="suite-tag">Albanese Lab Plotting Tools</span>
+  <h1>ITC Thermogram Plotter</h1>
+  <p>Overlay raw isothermal titration calorimetry injection-heat traces.</p>
+</header>
+
+<div class="layout">
+  <div class="control-panel" id="controlPanel">
+    <div class="format-note">
+      <strong>File format:</strong> upload the <strong>2-column raw injection-heat CSV export</strong>
+      (time in minutes, DP in &micro;cal/s) &mdash; the same "raw data" export produced by the instrument
+      software (e.g. NanoAnalyze / Origin). This tool does <strong>not</strong> read the instrument's
+      native <code>.itc</code> binary file directly &mdash; export to CSV first.
+    </div>
+    <div id="panelEditors"></div>
+    <button type="button" class="primary add-panel-btn" id="addPanelBtn">+ Add panel</button>
+  </div>
+
+  <div class="plot-area" id="plotArea"></div>
+</div>
+
+<footer class="app-footer">
+  All parsing happens locally in your browser &mdash; files are never uploaded anywhere. Nothing is saved between visits; reload the page to start fresh.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var SERIES_COLORS = ["var(--data-teal)", "var(--data-orange)", "var(--data-pink)", "var(--data-blue)", "var(--data-brown)"];
+
+  var state = {
+    panels: [],
+    nextPanelId: 1,
+    nextSampleId: 1
+  };
+
+  function uid(prefix, n) { return prefix + n; }
+
+  function makeSample() {
+    var s = {
+      id: uid("s", state.nextSampleId++),
+      label: "",
+      fileName: "",
+      data: null,
+      error: null
+    };
+    return s;
+  }
+
+  function makePanel() {
+    var p = {
+      id: uid("p", state.nextPanelId++),
+      label: "",
+      tempC: "",
+      samples: [makeSample(), makeSample(), makeSample()]
+    };
+    return p;
+  }
+
+  function addPanel() {
+    state.panels.push(makePanel());
+    renderAll();
+  }
+
+  function removePanel(panelId) {
+    state.panels = state.panels.filter(function (p) { return p.id !== panelId; });
+    if (state.panels.length === 0) {
+      state.panels.push(makePanel());
+    }
+    renderAll();
+  }
+
+  function addSampleRow(panel) {
+    panel.samples.push(makeSample());
+    renderAll();
+  }
+
+  function removeSampleRow(panel, sampleId) {
+    panel.samples = panel.samples.filter(function (s) { return s.id !== sampleId; });
+    renderAll();
+  }
+
+  // ---- Parsing (ported exactly from the lab's validated Python parser) ----
+  // Raw file: CSV, skip header row (line 1), then each remaining line has
+  // time_min, dp_ucal_s as the first two comma-separated fields. Rows where
+  // either field fails to parse as a number are dropped.
+  function parseRawCsv(text) {
+    var lines = text.split(/\r\n|\r|\n/);
+    var rows = [];
+    for (var i = 1; i < lines.length; i++) {
+      var line = lines[i];
+      if (line === undefined || line.trim() === "") continue;
+      var fields = line.split(",");
+      if (fields.length < 2) continue;
+      var t = parseFloat(fields[0]);
+      var dp = parseFloat(fields[1]);
+      if (isNaN(t) || isNaN(dp)) continue;
+      rows.push({ time_min: t, dp_ucal_s: dp });
+    }
+    return rows;
+  }
+
+  function handleFileChosen(panel, sample, file) {
+    sample.fileName = file.name;
+    sample.error = null;
+    sample.data = null;
+    renderAll();
+
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      try {
+        var text = String(e.target.result || "");
+        var rows = parseRawCsv(text);
+        if (rows.length === 0) {
+          sample.error = "Couldn't find any usable data rows in this file. Make sure it's the 2-column raw injection-heat CSV export (time, DP), not the native .itc file.";
+          sample.data = null;
+        } else {
+          sample.data = rows;
+          sample.error = null;
+        }
+      } catch (err) {
+        sample.error = "This file couldn't be read as a CSV. Please double-check it's the raw injection-heat export.";
+        sample.data = null;
+      }
+      renderAll();
+    };
+    reader.onerror = function () {
+      sample.error = "There was a problem reading this file from disk. Please try selecting it again.";
+      sample.data = null;
+      renderAll();
+    };
+    reader.readAsText(file);
+  }
+
+  // ---- Rendering: control panel ----
+
+  function renderControlPanel() {
+    var container = document.getElementById("panelEditors");
+    container.innerHTML = "";
+
+    state.panels.forEach(function (panel, panelIndex) {
+      var box = document.createElement("div");
+      box.className = "panel-editor";
+
+      var head = document.createElement("div");
+      head.className = "panel-editor-head";
+      var h2 = document.createElement("h2");
+      h2.textContent = "Panel " + (panelIndex + 1);
+      head.appendChild(h2);
+
+      if (state.panels.length > 1) {
+        var removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "small danger-outline";
+        removeBtn.textContent = "Remove panel";
+        removeBtn.addEventListener("click", function () { removePanel(panel.id); });
+        head.appendChild(removeBtn);
+      }
+      box.appendChild(head);
+
+      // Panel label
+      var labelField = document.createElement("div");
+      labelField.className = "field";
+      var labelLbl = document.createElement("label");
+      labelLbl.className = "field-label";
+      labelLbl.textContent = "Panel label";
+      var labelInput = document.createElement("input");
+      labelInput.type = "text";
+      labelInput.placeholder = "e.g. WDR5 + peptide";
+      labelInput.value = panel.label;
+      labelInput.addEventListener("input", function () {
+        panel.label = labelInput.value;
+        updatePlotTitles();
+      });
+      labelField.appendChild(labelLbl);
+      labelField.appendChild(labelInput);
+      box.appendChild(labelField);
+
+      // Temp
+      var tempField = document.createElement("div");
+      tempField.className = "field";
+      var tempLbl = document.createElement("label");
+      tempLbl.className = "field-label";
+      tempLbl.textContent = "Temperature (°C, optional)";
+      var tempInput = document.createElement("input");
+      tempInput.type = "number";
+      tempInput.step = "any";
+      tempInput.placeholder = "e.g. 25";
+      tempInput.value = panel.tempC;
+      tempInput.addEventListener("input", function () {
+        panel.tempC = tempInput.value;
+        renderPlotCard(panel);
+      });
+      tempField.appendChild(tempLbl);
+      tempField.appendChild(tempInput);
+      box.appendChild(tempField);
+
+      // Sample rows
+      var sampleLbl = document.createElement("label");
+      sampleLbl.className = "field-label";
+      sampleLbl.textContent = "Overlay files";
+      box.appendChild(sampleLbl);
+
+      panel.samples.forEach(function (sample, sampleIndex) {
+        var row = document.createElement("div");
+        row.className = "sample-row";
+
+        var rowHead = document.createElement("div");
+        rowHead.className = "sample-row-head";
+
+        var rowLabelWrap = document.createElement("div");
+        rowLabelWrap.className = "sample-row-label";
+        var dot = document.createElement("span");
+        dot.className = "sample-swatch";
+        dot.style.background = SERIES_COLORS[sampleIndex % SERIES_COLORS.length];
+        rowLabelWrap.appendChild(dot);
+        var rowLabelText = document.createElement("span");
+        rowLabelText.textContent = "Sample " + (sampleIndex + 1);
+        rowLabelWrap.appendChild(rowLabelText);
+        rowHead.appendChild(rowLabelWrap);
+
+        if (panel.samples.length > 1) {
+          var rmBtn = document.createElement("button");
+          rmBtn.type = "button";
+          rmBtn.className = "small danger-outline";
+          rmBtn.textContent = "Remove";
+          rmBtn.addEventListener("click", function () { removeSampleRow(panel, sample.id); });
+          rowHead.appendChild(rmBtn);
+        }
+        row.appendChild(rowHead);
+
+        var sampleLabelInput = document.createElement("input");
+        sampleLabelInput.type = "text";
+        sampleLabelInput.placeholder = "Sample label (e.g. 25°C rep 1)";
+        sampleLabelInput.value = sample.label;
+        sampleLabelInput.addEventListener("input", function () {
+          sample.label = sampleLabelInput.value;
+          renderPlotCard(panel);
+        });
+        row.appendChild(sampleLabelInput);
+
+        var fileInput = document.createElement("input");
+        fileInput.type = "file";
+        fileInput.accept = ".csv,.txt,text/csv,text/plain";
+        fileInput.addEventListener("change", function () {
+          if (fileInput.files && fileInput.files[0]) {
+            handleFileChosen(panel, sample, fileInput.files[0]);
+          }
+        });
+        row.appendChild(fileInput);
+
+        if (sample.error) {
+          var errDiv = document.createElement("div");
+          errDiv.className = "file-error";
+          errDiv.textContent = sample.error;
+          row.appendChild(errDiv);
+        } else if (sample.data) {
+          var okDiv = document.createElement("div");
+          okDiv.className = "file-status ok";
+          okDiv.textContent = "✓ " + sample.fileName + " — " + sample.data.length + " points loaded";
+          row.appendChild(okDiv);
+        } else if (sample.fileName) {
+          var pendingDiv = document.createElement("div");
+          pendingDiv.className = "file-status";
+          pendingDiv.textContent = "Reading " + sample.fileName + "…";
+          row.appendChild(pendingDiv);
+        }
+
+        box.appendChild(row);
+      });
+
+      var addSampleBtn = document.createElement("button");
+      addSampleBtn.type = "button";
+      addSampleBtn.className = "add-sample-btn";
+      addSampleBtn.textContent = "+ Add another sample";
+      addSampleBtn.addEventListener("click", function () { addSampleRow(panel); });
+      box.appendChild(addSampleBtn);
+
+      container.appendChild(box);
+    });
+  }
+
+  function updatePlotTitles() {
+    state.panels.forEach(function (panel) {
+      var titleEl = document.getElementById("title-" + panel.id);
+      if (titleEl) {
+        titleEl.textContent = panel.label && panel.label.trim() ? panel.label.trim() : "Untitled panel";
+      }
+    });
+  }
+
+  // ---- Rendering: plots ----
+
+  var SVG_NS = "http://www.w3.org/2000/svg";
+
+  function svgEl(tag, attrs) {
+    var el = document.createElementNS(SVG_NS, tag);
+    if (attrs) {
+      for (var k in attrs) {
+        if (Object.prototype.hasOwnProperty.call(attrs, k)) {
+          el.setAttribute(k, attrs[k]);
+        }
+      }
+    }
+    return el;
+  }
+
+  function niceStep(rawStep) {
+    if (rawStep <= 0 || !isFinite(rawStep)) return 1;
+    var exp = Math.floor(Math.log10(rawStep));
+    var base = Math.pow(10, exp);
+    var frac = rawStep / base;
+    var niceFrac;
+    if (frac <= 1) niceFrac = 1;
+    else if (frac <= 2) niceFrac = 2;
+    else if (frac <= 5) niceFrac = 5;
+    else niceFrac = 10;
+    return niceFrac * base;
+  }
+
+  function niceTicks(min, max, count) {
+    if (min === max) {
+      min -= 1;
+      max += 1;
+    }
+    var range = max - min;
+    var step = niceStep(range / count);
+    var start = Math.ceil(min / step) * step;
+    var ticks = [];
+    for (var v = start; v <= max + step * 1e-6; v += step) {
+      ticks.push(Math.round(v / step) * step);
+    }
+    return ticks;
+  }
+
+  function formatTick(v) {
+    var r = Math.round(v * 1000) / 1000;
+    if (Math.abs(r) < 1e-9) r = 0;
+    return String(r);
+  }
+
+  function buildPlotSvg(panel) {
+    var W = 620, H = 400;
+    var marginLeft = 62, marginRight = 20, marginTop = 20, marginBottom = 52;
+    var plotW = W - marginLeft - marginRight;
+    var plotH = H - marginTop - marginBottom;
+
+    var loadedSamples = panel.samples.filter(function (s) { return s.data && s.data.length > 0; });
+
+    var svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, xmlns: SVG_NS });
+
+    if (loadedSamples.length === 0) {
+      return null;
+    }
+
+    // Compute combined x/y range across ALL loaded samples in the panel.
+    var xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
+    loadedSamples.forEach(function (s) {
+      s.data.forEach(function (pt) {
+        if (pt.time_min < xMin) xMin = pt.time_min;
+        if (pt.time_min > xMax) xMax = pt.time_min;
+        if (pt.dp_ucal_s < yMin) yMin = pt.dp_ucal_s;
+        if (pt.dp_ucal_s > yMax) yMax = pt.dp_ucal_s;
+      });
+    });
+
+    var yPad = (yMax - yMin) * 0.15;
+    if (yPad === 0) yPad = Math.abs(yMax) * 0.15 || 1;
+    var yLo = yMin - yPad, yHi = yMax + yPad;
+
+    var xPad = (xMax - xMin) * 0.02;
+    var xLo = xMin - xPad, xHi = xMax + xPad;
+    if (xLo === xHi) { xLo -= 1; xHi += 1; }
+
+    function xToPx(x) { return marginLeft + ((x - xLo) / (xHi - xLo)) * plotW; }
+    function yToPx(y) { return marginTop + (1 - (y - yLo) / (yHi - yLo)) * plotH; }
+
+    var xTicks = niceTicks(xLo, xHi, 6);
+    var yTicks = niceTicks(yLo, yHi, 6);
+
+    // Gridlines + axis ticks
+    yTicks.forEach(function (ty) {
+      var py = yToPx(ty);
+      svg.appendChild(svgEl("line", {
+        class: "grid-line", x1: marginLeft, x2: marginLeft + plotW, y1: py, y2: py
+      }));
+      var label = svgEl("text", {
+        class: "axis-text", x: marginLeft - 8, y: py + 3.5, "font-size": "10.5", "text-anchor": "end"
+      });
+      label.textContent = formatTick(ty);
+      svg.appendChild(label);
+    });
+
+    xTicks.forEach(function (tx) {
+      var px = xToPx(tx);
+      svg.appendChild(svgEl("line", {
+        class: "grid-line", x1: px, x2: px, y1: marginTop, y2: marginTop + plotH
+      }));
+      var label = svgEl("text", {
+        class: "axis-text", x: px, y: marginTop + plotH + 16, "font-size": "10.5", "text-anchor": "middle"
+      });
+      label.textContent = formatTick(tx);
+      svg.appendChild(label);
+    });
+
+    // Axes
+    svg.appendChild(svgEl("line", {
+      class: "axis-line", x1: marginLeft, x2: marginLeft, y1: marginTop, y2: marginTop + plotH
+    }));
+    svg.appendChild(svgEl("line", {
+      class: "axis-line", x1: marginLeft, x2: marginLeft + plotW, y1: marginTop + plotH, y2: marginTop + plotH
+    }));
+
+    // Axis titles
+    var xTitle = svgEl("text", {
+      class: "axis-title", x: marginLeft + plotW / 2, y: H - 8, "font-size": "12", "text-anchor": "middle"
+    });
+    xTitle.textContent = "Time (min)";
+    svg.appendChild(xTitle);
+
+    var yTitle = svgEl("text", {
+      class: "axis-title", x: 14, y: marginTop + plotH / 2,
+      "font-size": "12", "text-anchor": "middle",
+      transform: "rotate(-90 14 " + (marginTop + plotH / 2) + ")"
+    });
+    var yMain = document.createElementNS(SVG_NS, "tspan");
+    yMain.textContent = "DP (µcal s";
+    yTitle.appendChild(yMain);
+    var ySup = document.createElementNS(SVG_NS, "tspan");
+    ySup.setAttribute("baseline-shift", "super");
+    ySup.setAttribute("font-size", "70%");
+    ySup.textContent = "-1";
+    yTitle.appendChild(ySup);
+    var yClose = document.createElementNS(SVG_NS, "tspan");
+    yClose.textContent = ")";
+    yTitle.appendChild(yClose);
+    svg.appendChild(yTitle);
+
+    // Data lines
+    panel.samples.forEach(function (s, idx) {
+      if (!s.data || s.data.length === 0) return;
+      var color = SERIES_COLORS[idx % SERIES_COLORS.length];
+      var sorted = s.data.slice().sort(function (a, b) { return a.time_min - b.time_min; });
+      var d = "";
+      sorted.forEach(function (pt, i) {
+        var px = xToPx(pt.time_min);
+        var py = yToPx(pt.dp_ucal_s);
+        d += (i === 0 ? "M" : "L") + px.toFixed(2) + "," + py.toFixed(2) + " ";
+      });
+      svg.appendChild(svgEl("path", {
+        d: d, fill: "none", stroke: color, "stroke-width": "2",
+        "stroke-linejoin": "round", "stroke-linecap": "round"
+      }));
+    });
+
+    // Sample labels, upper right, stacked, in sample order
+    var labelX = marginLeft + plotW * 0.96;
+    var labelYStart = marginTop + plotH * (1 - 0.90);
+    var labelStep = plotH * 0.12;
+    var loadedIdxCounter = 0;
+    panel.samples.forEach(function (s, idx) {
+      if (!s.data || s.data.length === 0) return;
+      var color = SERIES_COLORS[idx % SERIES_COLORS.length];
+      var text = s.label && s.label.trim() ? s.label.trim() : ("Sample " + (idx + 1));
+      var ly = labelYStart + labelStep * loadedIdxCounter;
+      var t = svgEl("text", {
+        class: "series-label-text", x: labelX, y: ly, "font-size": "11.5",
+        "text-anchor": "end", fill: color,
+        stroke: "var(--surface)", "stroke-width": "3", "paint-order": "stroke"
+      });
+      t.textContent = text;
+      svg.appendChild(t);
+      loadedIdxCounter++;
+    });
+
+    // Temperature label, bottom right
+    if (panel.tempC !== "" && panel.tempC !== null && !isNaN(parseFloat(panel.tempC))) {
+      var tempVal = parseFloat(panel.tempC);
+      var tempText = svgEl("text", {
+        class: "temp-label-text",
+        x: marginLeft + plotW - 8,
+        y: marginTop + plotH - 10,
+        "font-size": "13",
+        "text-anchor": "end",
+        stroke: "var(--surface)", "stroke-width": "3", "paint-order": "stroke"
+      });
+      tempText.textContent = formatTick(tempVal) + " °C";
+      svg.appendChild(tempText);
+    }
+
+    return svg;
+  }
+
+  // ============================================================
+  // Save chart as PNG / SVG
+  // ============================================================
+  function downloadChartAsSvg(svgEl, baseName){ window.LabFigure.downloadSvg(svgEl, baseName); }
+  function downloadChartAsPng(svgEl, baseName){ window.LabFigure.downloadPng(svgEl, baseName); }
+
+  function renderPlotCard(panel) {
+    var card = document.getElementById("card-" + panel.id);
+    if (!card) return;
+
+    var svgWrap = card.querySelector(".plot-svg-wrap");
+    var emptyDiv = card.querySelector(".empty-plot");
+    var swatchRow = card.querySelector(".swatch-row");
+    var tableWrap = card.querySelector(".table-wrap");
+
+    var loadedSamples = panel.samples.filter(function (s) { return s.data && s.data.length > 0; });
+
+    // rebuild swatch row
+    swatchRow.innerHTML = "";
+    panel.samples.forEach(function (s, idx) {
+      if (!s.data || s.data.length === 0) return;
+      var item = document.createElement("span");
+      item.className = "swatch-item";
+      var dot = document.createElement("span");
+      dot.className = "swatch-dot";
+      dot.style.background = SERIES_COLORS[idx % SERIES_COLORS.length];
+      item.appendChild(dot);
+      var text = document.createElement("span");
+      text.textContent = s.label && s.label.trim() ? s.label.trim() : ("Sample " + (idx + 1));
+      item.appendChild(text);
+      swatchRow.appendChild(item);
+    });
+
+    if (loadedSamples.length === 0) {
+      svgWrap.innerHTML = "";
+      svgWrap.style.display = "none";
+      emptyDiv.style.display = "flex";
+      tableWrap.innerHTML = "";
+      var anyFilesChosen = panel.samples.some(function (s) { return s.fileName; });
+      emptyDiv.textContent = anyFilesChosen
+        ? "No plottable data yet — check the file(s) above for errors."
+        : "Add sample files on the left to see the overlaid thermogram here.";
+      return;
+    }
+
+    emptyDiv.style.display = "none";
+    svgWrap.style.display = "block";
+    var svg = buildPlotSvg(panel);
+    svgWrap.innerHTML = "";
+    if (svg) svgWrap.appendChild(svg);
+
+    // Data table
+    tableWrap.innerHTML = "";
+    var toggleBtn = card.querySelector(".table-toggle");
+    var isOpen = tableWrap.getAttribute("data-open") === "true";
+    tableWrap.style.display = isOpen ? "block" : "none";
+    if (toggleBtn) toggleBtn.textContent = isOpen ? "Hide data table" : "View data table";
+
+    if (isOpen) {
+      var table = document.createElement("table");
+      table.className = "data-table";
+      var thead = document.createElement("thead");
+      var headRow = document.createElement("tr");
+      var thSample = document.createElement("th");
+      thSample.textContent = "Sample";
+      var thTime = document.createElement("th");
+      thTime.textContent = "Time (min)";
+      var thDp = document.createElement("th");
+      thDp.textContent = "DP (µcal/s)";
+      headRow.appendChild(thSample);
+      headRow.appendChild(thTime);
+      headRow.appendChild(thDp);
+      thead.appendChild(headRow);
+      table.appendChild(thead);
+
+      var tbody = document.createElement("tbody");
+      panel.samples.forEach(function (s, idx) {
+        if (!s.data || s.data.length === 0) return;
+        var sampleName = s.label && s.label.trim() ? s.label.trim() : ("Sample " + (idx + 1));
+        s.data.forEach(function (pt) {
+          var tr = document.createElement("tr");
+          var tdS = document.createElement("td");
+          tdS.textContent = sampleName;
+          var tdT = document.createElement("td");
+          tdT.textContent = pt.time_min;
+          var tdD = document.createElement("td");
+          tdD.textContent = pt.dp_ucal_s;
+          tr.appendChild(tdS);
+          tr.appendChild(tdT);
+          tr.appendChild(tdD);
+          tbody.appendChild(tr);
+        });
+      });
+      table.appendChild(tbody);
+      tableWrap.appendChild(table);
+    }
+  }
+
+  function renderPlotArea() {
+    var container = document.getElementById("plotArea");
+    container.innerHTML = "";
+
+    state.panels.forEach(function (panel) {
+      var card = document.createElement("div");
+      card.className = "plot-card";
+      card.id = "card-" + panel.id;
+
+      var title = document.createElement("div");
+      title.className = "plot-card-title";
+      title.id = "title-" + panel.id;
+      title.textContent = panel.label && panel.label.trim() ? panel.label.trim() : "Untitled panel";
+      card.appendChild(title);
+
+      var sub = document.createElement("div");
+      sub.className = "plot-card-sub";
+      sub.textContent = "Raw injection-heat overlay";
+      card.appendChild(sub);
+
+      var svgWrap = document.createElement("div");
+      svgWrap.className = "plot-svg-wrap";
+      svgWrap.id = "chart-" + panel.id;
+      card.appendChild(svgWrap);
+
+      var chartActions = document.createElement("div");
+      chartActions.className = "chart-actions";
+
+      var savePngBtn = document.createElement("button");
+      savePngBtn.type = "button";
+      savePngBtn.className = "small chart-save-btn";
+      savePngBtn.textContent = "Save PNG";
+      savePngBtn.setAttribute("data-target", svgWrap.id);
+      savePngBtn.setAttribute("data-format", "png");
+      savePngBtn.addEventListener("click", function () {
+        var svgNode = svgWrap.querySelector("svg");
+        if (!svgNode) return;
+        var labelVal = panel.label && panel.label.trim() ? panel.label.trim() : "chart";
+        var chartKind = svgWrap.id.replace(/-[^-]+$/, "");
+        downloadChartAsPng(svgNode, labelVal + "_" + chartKind);
+      });
+      chartActions.appendChild(savePngBtn);
+
+      var saveSvgBtn = document.createElement("button");
+      saveSvgBtn.type = "button";
+      saveSvgBtn.className = "small chart-save-btn";
+      saveSvgBtn.textContent = "Save SVG";
+      saveSvgBtn.setAttribute("data-target", svgWrap.id);
+      saveSvgBtn.setAttribute("data-format", "svg");
+      saveSvgBtn.addEventListener("click", function () {
+        var svgNode = svgWrap.querySelector("svg");
+        if (!svgNode) return;
+        var labelVal = panel.label && panel.label.trim() ? panel.label.trim() : "chart";
+        var chartKind = svgWrap.id.replace(/-[^-]+$/, "");
+        downloadChartAsSvg(svgNode, labelVal + "_" + chartKind);
+      });
+      chartActions.appendChild(saveSvgBtn);
+
+      card.appendChild(chartActions);
+
+      var emptyDiv = document.createElement("div");
+      emptyDiv.className = "empty-plot";
+      emptyDiv.textContent = "Add sample files on the left to see the overlaid thermogram here.";
+      card.appendChild(emptyDiv);
+
+      var swatchRow = document.createElement("div");
+      swatchRow.className = "swatch-row";
+      card.appendChild(swatchRow);
+
+      var toggleBtn = document.createElement("button");
+      toggleBtn.type = "button";
+      toggleBtn.className = "table-toggle";
+      toggleBtn.textContent = "View data table";
+      card.appendChild(toggleBtn);
+
+      var tableWrap = document.createElement("div");
+      tableWrap.className = "table-wrap";
+      tableWrap.setAttribute("data-open", "false");
+      tableWrap.style.display = "none";
+      card.appendChild(tableWrap);
+
+      toggleBtn.addEventListener("click", function () {
+        var open = tableWrap.getAttribute("data-open") === "true";
+        tableWrap.setAttribute("data-open", open ? "false" : "true");
+        renderPlotCard(panel);
+      });
+
+      container.appendChild(card);
+      renderPlotCard(panel);
+    });
+  }
+
+  function renderAll() {
+    renderControlPanel();
+    renderPlotArea();
+  }
+
+  document.getElementById("addPanelBtn").addEventListener("click", addPanel);
+
+  // init
+  state.panels.push(makePanel());
+  renderAll();
+})();
+</script>
+</body>
+</html>
