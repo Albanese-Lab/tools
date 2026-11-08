@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SPPS Peptide Mass &amp; Charge-State Calculator</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#ffffff; --ink:#1c2128; --muted:#5b6672;
+    --line:#dfe3e8; --accent:#1f6f8b; --accent-soft:#e8f1f5;
+    --warn:#b45309; --good:#15803d; --bad:#b91c1c;
+    --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;}
+  header{background:var(--panel);border-bottom:1px solid var(--line);padding:14px 22px;}
+  header h1{margin:0;font-size:19px;font-weight:650;letter-spacing:-.01em}
+  header p{margin:3px 0 0;color:var(--muted);font-size:13px}
+  .wrap{max-width:1280px;margin:0 auto;padding:18px 22px 70px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px 18px;margin-bottom:16px}
+  .panel h2{margin:0 0 12px;font-size:15px;font-weight:650;letter-spacing:.01em}
+  .panel h3{margin:16px 0 8px;font-size:13.5px;font-weight:650;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .grid{display:grid;gap:14px}
+  .g2{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+  .g3{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+  label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:4px}
+  input[type=text],input[type=number],textarea,select{
+    width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:5px;background:#fff;
+    font-size:14px;color:var(--ink);font-family:inherit}
+  input[type=text].seq,textarea{font-family:var(--mono);letter-spacing:.03em}
+  textarea{resize:vertical}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+  .chk{display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:500;color:var(--ink);margin:5px 0}
+  .chk input{width:15px;height:15px;margin:0}
+  button{background:var(--accent);color:#fff;border:0;border-radius:5px;padding:8px 15px;
+         font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit}
+  button:hover{filter:brightness(1.08)}
+  button.ghost{background:#fff;color:var(--accent);border:1px solid var(--accent)}
+  button.small{padding:5px 10px;font-size:12.5px}
+  .tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:16px}
+  .tabs button{background:transparent;color:var(--muted);border-radius:6px 6px 0 0;border:1px solid transparent;
+               border-bottom:none;margin-bottom:-1px;font-weight:600}
+  .tabs button.active{background:var(--panel);color:var(--accent);border-color:var(--line);}
+  .tabpane{display:none} .tabpane.active{display:block}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  th,td{border-bottom:1px solid var(--line);padding:5px 8px;text-align:left;white-space:nowrap}
+  th{background:#f0f3f5;font-weight:650;font-size:12px;color:var(--muted);position:sticky;top:0;z-index:2}
+  td.num,th.num{text-align:right;font-family:var(--mono);font-size:12.5px}
+  tbody tr:hover{background:var(--accent-soft)}
+  .scroll{max-height:620px;overflow:auto;border:1px solid var(--line);border-radius:6px}
+  .tag{display:inline-block;padding:1px 6px;border-radius:9px;font-size:11px;font-weight:650;
+       background:#eef1f4;color:var(--muted)}
+  .tag.add{background:#fdf0e3;color:var(--warn)}
+  .tag.loss{background:#fde8e8;color:var(--bad)}
+  .tag.del{background:#e9eefb;color:#3451a3}
+  .tag.ins{background:#e6f4ea;color:var(--good)}
+  .tag.adduct{background:#f2eafc;color:#6b21a8}
+  .tag.trunc{background:#e4f1f5;color:var(--accent)}
+  .muted{color:var(--muted);font-size:12.5px}
+  .big{font-family:var(--mono);font-size:22px;font-weight:600}
+  .kv{display:flex;flex-wrap:wrap;gap:22px;margin:4px 0 2px}
+  .kv div span{display:block;font-size:11.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+  .adductgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:2px 16px;margin-top:4px}
+  .warnbox{background:#fdf4e3;border:1px solid #efd9ac;color:#8a5a0b;padding:8px 11px;border-radius:5px;font-size:13px;margin-top:8px}
+  .err{background:#fde8e8;border:1px solid #f5c2c2;color:#8c1c1c;padding:8px 11px;border-radius:5px;font-size:13px;margin-top:10px}
+  .ok{background:#e9f5ec;border:1px solid #bfe0c8;color:#1b5e2a;padding:8px 11px;border-radius:5px;font-size:13px;margin-top:10px}
+  .out{opacity:.33}
+  .hit{background:#e6f4ea}
+  .mono{font-family:var(--mono)}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+  details{margin-top:10px} summary{cursor:pointer;font-weight:600;font-size:13px;color:var(--accent)}
+  footer{color:var(--muted);font-size:12px;padding:0 22px 30px;max-width:1280px;margin:0 auto}
+  @media print{
+    body{background:#fff} .tabs,.toolbar,button,header p{display:none}
+    .tabpane{display:block !important} .scroll{max-height:none;overflow:visible}
+    .panel{break-inside:avoid;border:0;padding:0}
+  }
+</style>
+<script src="figure-export.js" data-tool=""></script>
+</head>
+<body>
+<header>
+  <h1>SPPS Peptide Mass &amp; Charge-State Calculator</h1>
+  <p>Charge states z = 1–10 · adducts · deletions, truncations, insertions · incomplete-deprotection and side-reaction masses · observed-<i>m/z</i> identifier</p>
+</header>
+
+<div class="wrap">
+
+<div class="panel">
+  <h2>1 · Define the peptide</h2>
+  <div class="grid g2">
+    <div>
+      <label for="seq">Sequence (1-letter) — optional, enables sequence-specific impurities</label>
+      <input type="text" id="seq" class="seq" placeholder="e.g. ARTK(ac)QTARK(me3)STGGKAPR-NH2" spellcheck="false">
+      <div class="muted" id="seqnote" style="margin-top:5px">
+        Modified residue → <code>K(ac)</code>, <code>K(cr)</code>, <code>S(ph)</code>, <code>K(me3)</code>, <code>R(cit)</code>,
+        <code>Q(serotonyl)</code> / <code>Q(dopaminyl)</code> / <code>Q(histaminyl)</code>, or a raw delta <code>K(+42.0106)</code>.
+        Non-standard residue → <code>[Nle]</code>, <code>[Orn]</code>, <code>[Aib]</code>, <code>[Ado]</code>.
+        N-terminal cap → <code>Ac-</code>, <code>Biotin-</code>, <code>Palm-</code>, <code>FITC-</code>. C-terminus → <code>-NH2</code>.
+        All codes are listed in the <b>Reference tables</b> tab.
+      </div>
+      <div class="toolbar" style="margin:8px 0 0">
+        <span class="muted">Examples:</span>
+        <button class="small ghost" onclick="loadExample('ARTKQTARKSTGGKAPRKQLATKAARKSAP')">H3 1–30</button>
+        <button class="small ghost" onclick="loadExample('ARTK(ac)QTARK(me3)STGGKAPR')">H3 K4ac K9me3</button>
+        <button class="small ghost" onclick="loadExample('Ac-SGRGK(ac)GGK(ac)GLGK(ac)GGAK(ac)RHRK-NH2')">H4 tetra-ac</button>
+        <button class="small ghost" onclick="loadExample('ARTK(me3)Q(serotonyl)TARKSTGGKAPR')">H3 K4me3 Q5ser</button>
+        <button class="small ghost" onclick="loadExample('ARTKQTARK(cr)STGGKAPR')">H3 K9cr</button>
+        <button class="small ghost" onclick="loadExample('EPPLS(ph)QETFS(ph)DLWKLLPEN-NH2')">p53 TAD diphospho</button>
+      </div>
+    </div>
+    <div>
+      <label for="mass">…or enter the neutral monoisotopic mass directly (Da)</label>
+      <input type="number" id="mass" step="0.0001" placeholder="e.g. 1045.5345">
+      <div class="muted" style="margin-top:5px">If a valid sequence is present it takes priority and this box is filled from it.</div>
+    </div>
+  </div>
+
+  <div class="grid g3" style="margin-top:14px">
+    <div>
+      <label for="masstype">Mass type</label>
+      <select id="masstype">
+        <option value="mono">Monoisotopic (high-res: TOF, Orbitrap, FT)</option>
+        <option value="avg">Average (low-res / deconvoluted)</option>
+      </select>
+    </div>
+    <div>
+      <label for="nterm">N-terminus (overridden by a sequence prefix)</label>
+      <select id="nterm"><option value="">Free amine (H)</option></select>
+    </div>
+    <div>
+      <label for="cterm">C-terminus</label>
+      <select id="cterm">
+        <option value="OH">Free acid (-OH)</option>
+        <option value="NH2">Amide (-NH2)</option>
+      </select>
+    </div>
+  </div>
+  <div id="inputmsg"></div>
+
+  <div class="kv" style="margin-top:14px">
+    <div><span>Neutral mass (M)</span><b class="big" id="outM">—</b></div>
+    <div><span>[M+H]<sup>+</sup></span><b class="big" id="outMH">—</b></div>
+    <div><span>[M+2H]<sup>2+</sup></span><b class="big" id="outM2H">—</b></div>
+    <div><span>Formula</span><b class="big" id="outFormula" style="font-size:17px">—</b></div>
+  </div>
+</div>
+
+<div class="tabs" id="tabs">
+  <button data-tab="charge" class="active">Charge states</button>
+  <button data-tab="impurities">Impurities &amp; by-products</button>
+  <button data-tab="identify">Identify observed m/z</button>
+  <button data-tab="reference">Reference tables</button>
+</div>
+
+<!-- ============ CHARGE STATES ============ -->
+<div class="tabpane active" id="tab-charge">
+  <div class="panel">
+    <h2>2 · Charge-state ladder for the target peptide</h2>
+    <div class="grid g3">
+      <div><label for="mzmin">Instrument <i>m/z</i> low</label><input type="number" id="mzmin" value="100" step="10"></div>
+      <div><label for="mzmax">Instrument <i>m/z</i> high</label><input type="number" id="mzmax" value="2000" step="10"></div>
+      <div><label for="dummy1">&nbsp;</label><div class="muted">Rows outside this window are dimmed.</div></div>
+    </div>
+    <div class="toolbar">
+      <button class="small ghost" onclick="exportTable('chargeTable','charge_states.csv')">Export CSV</button>
+      <span class="muted">Cation masses = neutral − electron; <i>m/z</i> = (M + Σcarriers)/z.</span>
+    </div>
+    <div class="scroll"><table id="chargeTable"></table></div>
+  </div>
+</div>
+
+<!-- ============ IMPURITIES ============ -->
+<div class="tabpane" id="tab-impurities">
+  <div class="panel">
+    <h2>3 · Synthesis-related species</h2>
+    <div class="grid g3">
+      <div>
+        <label>Include</label>
+        <div class="chk"><input type="checkbox" id="cbMods" checked><span>Side reactions &amp; retained protecting groups</span></div>
+        <div class="chk"><input type="checkbox" id="cbDel" checked><span>Single-residue deletions</span></div>
+        <div class="chk"><input type="checkbox" id="cbIns" checked><span>Single-residue insertions (double coupling)</span></div>
+        <div class="chk"><input type="checkbox" id="cbModX" checked><span>Incomplete / extra side-chain modification</span></div>
+      </div>
+      <div>
+        <label>Sequence-specific (needs a sequence)</label>
+        <div class="chk"><input type="checkbox" id="cbTrunc" checked><span>Truncation ladder (N- and C-terminal)</span></div>
+        <div class="chk"><input type="checkbox" id="cbCap" checked><span>Acetyl-capped failure sequences</span></div>
+        <div class="chk"><input type="checkbox" id="cbDouble"><span>Double deletions (residue pairs)</span></div>
+      </div>
+      <div>
+        <label for="zshow">Show charge states up to z =</label>
+        <select id="zshow">
+          <option>3</option><option selected>5</option><option>8</option><option>10</option>
+        </select>
+        <label for="filter" style="margin-top:10px">Filter rows (name contains)</label>
+        <input type="text" id="filter" placeholder="e.g. tBu, Arg, oxidation">
+      </div>
+    </div>
+    <div class="toolbar">
+      <button class="small ghost" onclick="exportTable('impTable','spps_impurities.csv')">Export CSV</button>
+      <span class="muted" id="impCount"></span>
+    </div>
+    <div class="scroll"><table id="impTable"></table></div>
+  </div>
+</div>
+
+<!-- ============ IDENTIFY ============ -->
+<div class="tabpane" id="tab-identify">
+  <div class="panel">
+    <h2>4 · Match observed <i>m/z</i> peaks</h2>
+    <div class="grid g2">
+      <div>
+        <label for="peaks">Observed <i>m/z</i> values — one per line (or comma separated)</label>
+        <textarea id="peaks" rows="7" placeholder="523.7745&#10;1046.5418&#10;1068.5237"></textarea>
+      </div>
+      <div>
+        <div class="grid g2">
+          <div>
+            <label for="tol">Tolerance</label>
+            <input type="number" id="tol" value="20" step="1">
+          </div>
+          <div>
+            <label for="tolunit">Unit</label>
+            <select id="tolunit"><option value="ppm">ppm</option><option value="da">Da (±)</option></select>
+          </div>
+        </div>
+        <label style="margin-top:10px">Charge carriers to consider</label>
+        <div class="chk"><input type="checkbox" id="carH" checked><span>H<sup>+</sup> (+1.00728)</span></div>
+        <div class="chk"><input type="checkbox" id="carNa" checked><span>Na<sup>+</sup> (+22.98922)</span></div>
+        <div class="chk"><input type="checkbox" id="carK"><span>K<sup>+</sup> (+38.96316)</span></div>
+        <div class="chk"><input type="checkbox" id="carNH4"><span>NH<sub>4</sub><sup>+</sup> (+18.03382)</span></div>
+        <div class="chk"><input type="checkbox" id="negmode"><span>Negative mode [M−zH]<sup>z−</sup> instead</span></div>
+        <div class="chk"><input type="checkbox" id="cbPairs"><span>Allow two stacked modifications (slower)</span></div>
+      </div>
+    </div>
+    <div style="margin-top:12px">
+      <label>Neutral adducts — added to <i>every</i> candidate species before charging</label>
+      <div id="adductBox" class="adductgrid"></div>
+      <div class="muted" style="margin-top:6px">The free (un-adducted) species is always searched as well.
+        These are the same adducts offered on the charge-state tab, but here they apply to truncations,
+        deletions and modified species too — not only to the target peptide.</div>
+    </div>
+    <div class="toolbar">
+      <button onclick="runMatch()">Identify peaks</button>
+      <button class="small ghost" onclick="exportTable('matchTable','peak_matches.csv')">Export CSV</button>
+      <span class="muted">Best 6 matches per peak, ranked by absolute error.</span>
+    </div>
+    <div id="matchmsg"></div>
+    <div class="scroll"><table id="matchTable"></table></div>
+  </div>
+</div>
+
+<!-- ============ REFERENCE ============ -->
+<div class="tabpane" id="tab-reference">
+  <div class="panel">
+    <h2>Residue masses</h2>
+    <div class="scroll" style="max-height:430px"><table id="refRes"></table></div>
+  </div>
+  <div class="panel">
+    <h2>Residue modification codes — use as <span class="mono">X(code)</span> in the sequence</h2>
+    <div class="muted" style="margin-bottom:8px">Case-insensitive; any listed alias works. A numeric delta such as
+      <span class="mono">K(+114.0429)</span> or <span class="mono">S(-18.0106)</span> is always accepted.</div>
+    <div class="scroll" style="max-height:460px"><table id="refModAA"></table></div>
+  </div>
+  <div class="panel">
+    <h2>Non-standard residues — use as <span class="mono">[code]</span> in the sequence</h2>
+    <div class="scroll" style="max-height:460px"><table id="refNSAA"></table></div>
+  </div>
+  <div class="panel">
+    <h2>Synthesis by-product / adduct masses</h2>
+    <div class="scroll" style="max-height:520px"><table id="refMod"></table></div>
+  </div>
+  <div class="panel">
+    <h2>Constants and conventions</h2>
+    <table id="refConst"></table>
+    <details>
+      <summary>How each number is calculated</summary>
+      <div class="muted" style="margin-top:8px;line-height:1.7">
+        <b>Neutral peptide mass</b> M = Σ(residue masses) + H<sub>2</sub>O, then −0.98402 Da for a C-terminal amide
+        and +42.01057 Da for an N-terminal acetyl (monoisotopic values shown).<br>
+        <b>Charge states</b> m/z = (M + Σ carrier masses) / z, where each carrier mass is the neutral atom/molecule
+        mass minus one electron mass (0.000549 Da): H<sup>+</sup> 1.007276, Na<sup>+</sup> 22.989220,
+        K<sup>+</sup> 38.963158, NH<sub>4</sub><sup>+</sup> 18.033823. Negative mode uses (M − z·1.007276)/z.<br>
+        <b>Deletions</b> subtract a residue mass (not the free amino acid): residue = amino acid − H<sub>2</sub>O.<br>
+        <b>Truncations</b> are recomputed from the remaining sequence, so terminal chemistry is handled explicitly —
+        N-terminal truncations keep the C-terminal group, C-terminal truncations keep the N-terminal group.<br>
+        <b>Modifications</b> are evaluated from their elemental composition in both monoisotopic and average mode,
+        so switching mass type rescales every row consistently.
+      </div>
+    </details>
+  </div>
+</div>
+
+</div>
+
+<footer>
+  Research tool for interpreting crude SPPS LC–MS data. All masses are computed from elemental compositions at run time;
+  verify critical assignments against a standard and against isotope-pattern/charge spacing in the raw data.
+  Works fully offline — save the file locally and open it in any browser.
+</footer>
+
+<script>
+"use strict";
+/* ============================================================
+   Atomic masses: [monoisotopic, average]
+   ============================================================ */
+const EL = {
+  H :[1.00782503207, 1.00794],
+  C :[12.0000000000, 12.0107],
+  N :[14.0030740048, 14.0067],
+  O :[15.9949146196, 15.9994],
+  S :[31.97207100,   32.065],
+  F :[18.99840322,   18.9984032],
+  P :[30.97376163,   30.973762],
+  Na:[22.98976928,   22.98976928],
+  K :[38.96370668,   39.0983],
+  Cl:[34.96885268,   35.453]
+};
+const ELECTRON = 0.00054857990907;
+
+/* Formula expression parser: "C4H8", "-H2O", "C5H11N-H2O", "O-N-H" */
+function parseFormulaTerm(f){
+  const counts = {};
+  const re = /([A-Z][a-z]?)(\d*)/g; let m, consumed = 0;
+  while((m = re.exec(f)) !== null){
+    if(m[0] === "") break;
+    consumed += m[0].length;
+    if(!(m[1] in EL)) throw new Error("Unknown element: " + m[1]);
+    counts[m[1]] = (counts[m[1]] || 0) + (m[2] === "" ? 1 : parseInt(m[2],10));
+  }
+  if(consumed !== f.length) throw new Error("Cannot parse formula: " + f);
+  return counts;
+}
+function parseFormulaExpr(expr){
+  const counts = {};
+  const tokens = expr.replace(/\s/g,"").match(/[+-]?[^+-]+/g) || [];
+  for(const t of tokens){
+    const sign = t[0] === "-" ? -1 : 1;
+    const body = (t[0] === "+" || t[0] === "-") ? t.slice(1) : t;
+    if(!body) continue;
+    const c = parseFormulaTerm(body);
+    for(const e in c) counts[e] = (counts[e] || 0) + sign*c[e];
+  }
+  return counts;
+}
+function massOfCounts(counts, mode){
+  const i = mode === "avg" ? 1 : 0;
+  let m = 0;
+  for(const e in counts) m += counts[e]*EL[e][i];
+  return m;
+}
+function fmass(expr, mode){ return massOfCounts(parseFormulaExpr(expr), mode); }
+function addCounts(a, b, k){
+  const o = Object.assign({}, a);
+  for(const e in b){ o[e] = (o[e]||0) + (k||1)*b[e]; if(o[e] === 0) delete o[e]; }
+  return o;
+}
+function formulaString(counts){
+  const order = ["C","H","N","O","S","P","F","Cl","Na","K"];
+  let s = "";
+  for(const e of order){ if(counts[e]) s += e + (counts[e] > 1 ? counts[e] : ""); }
+  return s || "—";
+}
+
+/* ============================================================
+   Residues (formula = amino acid − H2O)
+   ============================================================ */
+const RES = {
+  G:["Gly","Glycine",       "C2H3NO"],
+  A:["Ala","Alanine",       "C3H5NO"],
+  S:["Ser","Serine",        "C3H5NO2"],
+  P:["Pro","Proline",       "C5H7NO"],
+  V:["Val","Valine",        "C5H9NO"],
+  T:["Thr","Threonine",     "C4H7NO2"],
+  C:["Cys","Cysteine",      "C3H5NOS"],
+  L:["Leu","Leucine",       "C6H11NO"],
+  I:["Ile","Isoleucine",    "C6H11NO"],
+  N:["Asn","Asparagine",    "C4H6N2O2"],
+  D:["Asp","Aspartic acid", "C4H5NO3"],
+  Q:["Gln","Glutamine",     "C5H8N2O2"],
+  K:["Lys","Lysine",        "C6H12N2O"],
+  E:["Glu","Glutamic acid", "C5H7NO3"],
+  M:["Met","Methionine",    "C5H9NOS"],
+  H:["His","Histidine",     "C6H7N3O"],
+  F:["Phe","Phenylalanine", "C9H9NO"],
+  R:["Arg","Arginine",      "C6H12N4O"],
+  Y:["Tyr","Tyrosine",      "C9H9NO2"],
+  W:["Trp","Tryptophan",    "C11H10N2O"]
+};
+const AA_ORDER = "GASPVTCLINDQKEMHFRYW".split("");
+
+/* ============================================================
+   Residue-level modifications:  K(ac)  S(ph)  K(me3)  R(cit)
+   f = elemental composition of the ADDED group (negative terms allowed)
+   ============================================================ */
+const MODAA = {
+  ac    :{name:"Acetyl",                      f:"C2H2O",        alias:["acetyl"],              grp:"acyl / epigenetic"},
+  me    :{name:"Monomethyl",                  f:"CH2",          alias:["methyl","me1"],        grp:"acyl / epigenetic"},
+  me2   :{name:"Dimethyl",                    f:"C2H4",         alias:["dimethyl"],            grp:"acyl / epigenetic"},
+  me3   :{name:"Trimethyl",                   f:"C3H6",         alias:["trimethyl"],           grp:"acyl / epigenetic"},
+  cr    :{name:"Crotonyl (Kcr)",               f:"C4H4O",       alias:["crotonyl","kcr","crotonylation"], grp:"acyl / epigenetic"},
+  succ  :{name:"Succinyl",                    f:"C4H4O3",       alias:["su","succinyl"],       grp:"acyl / epigenetic"},
+  mal   :{name:"Malonyl",                     f:"C3H2O3",       alias:["malonyl"],             grp:"acyl / epigenetic"},
+  but   :{name:"Butyryl",                     f:"C4H6O",        alias:["butyryl"],             grp:"acyl / epigenetic"},
+  prop  :{name:"Propionyl",                   f:"C3H4O",        alias:["pr","propionyl"],      grp:"acyl / epigenetic"},
+  hib   :{name:"2-Hydroxyisobutyryl",         f:"C4H6O2",       alias:["ohib"],                grp:"acyl / epigenetic"},
+  lac   :{name:"Lactyl",                      f:"C3H4O2",       alias:["lactyl"],              grp:"acyl / epigenetic"},
+  form  :{name:"Formyl",                      f:"CO",           alias:["formyl","fo"],         grp:"acyl / epigenetic"},
+  gg    :{name:"Ubiquitin remnant (Gly-Gly)", f:"C4H6N2O2",     alias:["ub","ubi"],            grp:"acyl / epigenetic"},
+  /* transglutaminase-2 monoaminylation of the Gln side-chain amide:
+     Gln-CONH2 + H2N-R → Gln-CO-NH-R + NH3, so Δ = (monoamine) − NH3 */
+  serotonyl :{name:"Serotonylation (TG2, Gln → Q-ser)",  f:"C10H9NO", alias:["sero","serotonin","5ht","qser"],
+              grp:"monoaminylation (TG2, Gln)", on:"Q", src:"serotonin C10H12N2O − NH3"},
+  dopaminyl :{name:"Dopaminylation (TG2, Gln → Q-dop)",  f:"C8H8O2",  alias:["dopam","dopamine","dpm","qdop"],
+              grp:"monoaminylation (TG2, Gln)", on:"Q", src:"dopamine C8H11NO2 − NH3"},
+  histaminyl:{name:"Histaminylation (TG2, Gln → Q-his)", f:"C5H6N2",  alias:["histam","histamine","htm","qhis"],
+              grp:"monoaminylation (TG2, Gln)", on:"Q", src:"histamine C5H9N3 − NH3"},
+  ph    :{name:"Phospho (Ser/Thr/Tyr)",       f:"HPO3",         alias:["phospho","p","pho"],   grp:"other PTM"},
+  cit   :{name:"Citrullination (Arg→Cit)",    f:"O-N-H",        alias:["deamid","deamidated"], grp:"other PTM"},
+  glcnac:{name:"O-GlcNAc",                    f:"C8H13NO5",     alias:["ognac","oglcnac"],     grp:"other PTM"},
+  sulfo :{name:"Sulfation (Tyr)",             f:"SO3",          alias:["so3","sulf"],          grp:"other PTM"},
+  nitro :{name:"Nitration (3-nitro-Tyr)",     f:"NO2-H",        alias:[],                      grp:"other PTM"},
+  ox    :{name:"Oxidation (Met/Trp/Cys)",     f:"O",            alias:["oxid","sulfoxide"],    grp:"other PTM"},
+  diox  :{name:"Dioxidation",                 f:"O2",           alias:["ox2"],                 grp:"other PTM"},
+  cam   :{name:"Carbamidomethyl (iodoacetamide)", f:"C2H3NO",   alias:["carbamidomethyl","iaa"], grp:"other PTM"},
+  pyro  :{name:"Pyroglutamate (Gln −NH3 / Glu −H2O)", f:null, special:"pyro", alias:["pyr","pga"], grp:"other PTM"},
+  d     :{name:"D-amino acid (no mass change)", f:"",           alias:["dconfig"],             grp:"other PTM"},
+  biotin:{name:"Biotinyl",                    f:"C10H14N2O2S",  alias:["bio"],                 grp:"label / lipid"},
+  palm  :{name:"Palmitoyl (C16)",             f:"C16H30O",      alias:["pal","palmitoyl","c16"], grp:"label / lipid"},
+  myr   :{name:"Myristoyl (C14)",             f:"C14H26O",      alias:["myristoyl","c14"],     grp:"label / lipid"},
+  stea  :{name:"Stearoyl (C18)",              f:"C18H34O",      alias:["stearoyl","c18"],      grp:"label / lipid"},
+  fitc  :{name:"FITC (thiourea link)",        f:"C21H11NO5S",   alias:["fluorescein"],         grp:"label / lipid"},
+  fam   :{name:"5(6)-FAM (carboxyfluorescein amide)", f:"C21H10O6", alias:["carboxyfluorescein"], grp:"label / lipid"},
+  dabcyl:{name:"Dabcyl",                      f:"C15H13N3O",    alias:[],                      grp:"label / lipid"},
+  bz    :{name:"Benzoyl",                     f:"C7H4O",        alias:["benzoyl"],             grp:"label / lipid"},
+  tfa   :{name:"Trifluoroacetyl",             f:"C2F3O-H",      alias:[],                      grp:"label / lipid"}
+};
+/* Modifications that make sense as an N-terminal cap, in menu order */
+const NTERM_CHOICES = ["","ac","form","bz","biotin","palm","myr","stea","fitc","fam","tfa"];
+
+/* ============================================================
+   Non-standard residues:  [Nle]  [Orn]  [Ado]
+   f = residue composition (free amino acid − H2O)
+   ============================================================ */
+const NSAA = {
+  nle  :{name:"Norleucine",                     f:"C6H11NO"},
+  nva  :{name:"Norvaline",                      f:"C5H9NO"},
+  abu  :{name:"2-Aminobutyric acid",            f:"C4H7NO"},
+  aib  :{name:"2-Aminoisobutyric acid",         f:"C4H7NO"},
+  tle  :{name:"tert-Leucine",                   f:"C6H11NO"},
+  orn  :{name:"Ornithine",                      f:"C5H10N2O"},
+  dab  :{name:"2,4-Diaminobutyric acid",        f:"C4H8N2O"},
+  dap  :{name:"2,3-Diaminopropionic acid",      f:"C3H6N2O",  alias:["dpr"]},
+  sar  :{name:"Sarcosine (N-methyl-Gly)",       f:"C3H5NO"},
+  hyp  :{name:"4-Hydroxyproline",               f:"C5H7NO2"},
+  cit  :{name:"Citrulline",                     f:"C6H11N3O2"},
+  pen  :{name:"Penicillamine",                  f:"C5H9NOS"},
+  hcy  :{name:"Homocysteine",                   f:"C4H7NOS"},
+  hph  :{name:"Homophenylalanine",              f:"C10H11NO"},
+  cha  :{name:"Cyclohexylalanine",              f:"C9H15NO"},
+  nal  :{name:"3-(2-Naphthyl)alanine",          f:"C13H11NO"},
+  phg  :{name:"Phenylglycine",                  f:"C8H7NO"},
+  thi  :{name:"3-(2-Thienyl)alanine",           f:"C7H7NOS"},
+  pra  :{name:"Propargylglycine (click)",       f:"C5H5NO"},
+  aha  :{name:"Azidohomoalanine (click)",       f:"C4H6N4O"},
+  pglu :{name:"Pyroglutamic acid",              f:"C5H5NO2",  alias:["pca","pyroglu"]},
+  bala :{name:"β-Alanine",                      f:"C3H5NO",   alias:["bal","betaala"]},
+  gaba :{name:"γ-Aminobutyric acid",            f:"C4H7NO"},
+  ahx  :{name:"6-Aminohexanoic acid (Ahx)",     f:"C6H11NO",  alias:["aca"]},
+  ado  :{name:"AEEA / PEG2 spacer (8-amino-3,6-dioxaoctanoyl)", f:"C6H11NO3", alias:["aeea","peg2"]},
+  peg4 :{name:"PEG4 spacer (15-amino-4,7,10,13-tetraoxapentadecanoyl)", f:"C11H21NO5"},
+  ttds :{name:"TTDS spacer",                    f:"C14H26N2O5"}
+};
+
+/* alias → canonical key lookups */
+function buildLookup(dict){
+  const L = {};
+  for(const k in dict){
+    L[k] = k;
+    for(const a of (dict[k].alias || [])) L[a] = k;
+  }
+  return L;
+}
+const MODAA_LOOKUP = buildLookup(MODAA);
+const NSAA_LOOKUP  = buildLookup(NSAA);
+
+/* ============================================================
+   Modifications / by-products of solid-phase peptide synthesis
+   cat: add | loss | adduct
+   ============================================================ */
+const MODS = [
+  // --- retained protecting groups (incomplete TFA cleavage) ---
+  {n:"+ tBu (incomplete deprotection: Ser/Thr/Tyr OtBu, Asp/Glu OtBu)", f:"C4H8",      c:"add"},
+  {n:"+ 2 × tBu",                                                       f:"C8H16",     c:"add"},
+  {n:"+ Boc (Lys/Trp side chain)",                                      f:"C5H8O2",    c:"add"},
+  {n:"+ 2 × Boc",                                                       f:"C10H16O4",  c:"add"},
+  {n:"+ Trt / trityl (Cys, His, Asn, Gln)",                             f:"C19H14",    c:"add"},
+  {n:"+ Mtt (4-methyltrityl)",                                          f:"C20H16",    c:"add"},
+  {n:"+ Mmt (4-methoxytrityl)",                                         f:"C20H16O",   c:"add"},
+  {n:"+ Pbf (Arg side chain)",                                          f:"C13H16O3S", c:"add"},
+  {n:"+ 2 × Pbf",                                                       f:"C26H32O6S2",c:"add"},
+  {n:"+ Pmc (Arg side chain, older chemistry)",                         f:"C14H18O3S", c:"add"},
+  {n:"+ Fmoc (incomplete final Fmoc removal)",                          f:"C15H10O2",  c:"add"},
+  {n:"+ Acm (Cys)",                                                     f:"C3H5NO",    c:"add"},
+  {n:"+ StBu (Cys disulfide protection)",                               f:"C4H8S",     c:"add"},
+  {n:"+ Dde (Lys)",                                                     f:"C10H14O2",  c:"add"},
+  {n:"+ ivDde (Lys)",                                                   f:"C13H20O2",  c:"add"},
+  {n:"+ Alloc",                                                         f:"C4H4O2",    c:"add"},
+  {n:"+ Allyl ester (OAll)",                                            f:"C3H4",      c:"add"},
+  {n:"+ Cbz / Z",                                                       f:"C8H6O2",    c:"add"},
+  {n:"+ NO2 (Arg nitro protection retained)",                           f:"NO2-H",     c:"add"},
+  // --- capping / acylation side reactions ---
+  {n:"+ Acetyl (Ac2O capping of a free amine)",                         f:"C2H2O",     c:"add"},
+  {n:"+ 2 × Acetyl",                                                    f:"C4H4O2",    c:"add"},
+  {n:"+ Trifluoroacetyl (TFA acylation of Lys/N-term)",                 f:"C2F3O-H",   c:"add"},
+  {n:"+ Formyl (from DMF / formic acid)",                               f:"CO",        c:"add"},
+  {n:"+ Methyl / methyl ester",                                         f:"CH2",       c:"add"},
+  {n:"+ Dibenzofulvene adduct (DBF, from Fmoc removal)",                f:"C15H12",    c:"add"},
+  // --- oxidation / elimination ---
+  {n:"+ O: oxidation (Met sulfoxide, Cys, Trp)",                        f:"O",         c:"add"},
+  {n:"+ 2 O: dioxidation (Met sulfone, Cys sulfinic)",                  f:"O2",        c:"add"},
+  {n:"+ 3 O: trioxidation (Cys sulfonic acid)",                         f:"O3",        c:"add"},
+  {n:"+ 0.98: deamidation (Asn→Asp, Gln→Glu)",                          f:"O-N-H",     c:"add"},
+  {n:"− H2O: aspartimide / dehydration / unwanted cyclisation",         f:"-H2O",      c:"loss"},
+  {n:"− 2 H2O",                                                         f:"-H4O2",     c:"loss"},
+  {n:"+ Piperidide (aspartimide opened by piperidine)",                 f:"C5H9N-O",   c:"add"},
+  {n:"− NH3: pyroglutamate from N-terminal Gln",                        f:"-NH3",      c:"loss"},
+  {n:"− H2O: pyroglutamate from N-terminal Glu",                        f:"-H2O",      c:"loss"},
+  {n:"− 2 H: intramolecular disulfide formation",                       f:"-H2",       c:"loss"},
+  {n:"− 2 H: oxidation of Cys to dehydroalanine route (β-elimination)", f:"-H2S",      c:"loss"},
+  // --- non-covalent / salt adducts (neutral species) ---
+  {n:"+ TFA adduct (non-covalent, trifluoroacetic acid)",               f:"C2HF3O2",   c:"adduct"},
+  {n:"+ 2 × TFA adduct",                                                f:"C4H2F6O4",  c:"adduct"},
+  {n:"+ Na − H (sodium salt of a carboxylate)",                         f:"Na-H",      c:"adduct"},
+  {n:"+ K − H (potassium salt)",                                        f:"K-H",       c:"adduct"},
+  {n:"+ Acetonitrile adduct",                                           f:"C2H3N",     c:"adduct"},
+  {n:"+ Formic acid adduct",                                            f:"CH2O2",     c:"adduct"}
+];
+
+/* Charge carriers: cation mass = neutral − electron */
+const CARRIERS = {
+  H  :{label:"H",   mass: fmass("H",  "mono") - ELECTRON},
+  Na :{label:"Na",  mass: fmass("Na", "mono") - ELECTRON},
+  K  :{label:"K",   mass: fmass("K",  "mono") - ELECTRON},
+  NH4:{label:"NH4", mass: fmass("NH4","mono") - ELECTRON}
+};
+
+/* ============================================================
+   State
+   ============================================================ */
+let STATE = {mode:"mono", M:null, counts:null, seq:null, tokens:[], nmod:"", cterm:"OH",
+             free:0, species:[]};
+
+const $ = id => document.getElementById(id);
+const f4 = x => (x === null || !isFinite(x)) ? "—" : x.toFixed(4);
+const f2 = x => (x === null || !isFinite(x)) ? "—" : x.toFixed(2);
+const fm  = x => STATE.mode === "avg" ? f2(x) : f4(x);
+
+/* ============================================================
+   Sequence parser
+   Residues      : one-letter codes, or [Nle] style for non-standard
+   Modifications : K(ac), S(ph), K(me3), or a raw delta K(+42.0106)
+   Termini       : Ac- / Biotin- / Palm- … prefix, -NH2 or -OH suffix
+   ============================================================ */
+const NUM_RE = /^[+-]?\d+(\.\d+)?$/;
+
+function makeMod(body, residueCode){
+  const key = body.toLowerCase().replace(/[\s_]/g,"");
+  if(NUM_RE.test(body)){
+    return {key:"num", name:(parseFloat(body) >= 0 ? "+" : "") + body, counts:null, delta:parseFloat(body)};
+  }
+  const canon = MODAA_LOOKUP[key];
+  if(!canon) throw new Error("Unknown modification code \u201c" + body + "\u201d — see the Reference tables tab for the list of codes.");
+  const m = MODAA[canon];
+  if(m.special === "pyro"){
+    if(residueCode === "Q") return {key:canon, name:"Pyroglutamate (−NH3)", counts:parseFormulaExpr("-NH3"), delta:0};
+    if(residueCode === "E") return {key:canon, name:"Pyroglutamate (−H2O)", counts:parseFormulaExpr("-H2O"), delta:0};
+    throw new Error("pyro applies to Gln (Q) or Glu (E), not " + residueCode + ".");
+  }
+  return {key:canon, name:m.name, counts:parseFormulaExpr(m.f || ""), delta:0};
+}
+
+function parseSequence(raw){
+  let s = raw.trim().replace(/\s+/g,"");
+  let nmod = "", cterm = "OH";
+
+  // C-terminal group
+  let m = s.match(/-?(CONH2|NH2|amide|COOH|OH|acid)$/i);
+  if(m){ cterm = /nh2|amide/i.test(m[1]) ? "NH2" : "OH"; s = s.slice(0, s.length - m[0].length); }
+  // N-terminal cap written as a prefix, e.g. Ac-, Biotin-, Palm-
+  m = s.match(/^([A-Za-z0-9]{2,12})-/);
+  if(m && MODAA_LOOKUP[m[1].toLowerCase()]){ nmod = MODAA_LOOKUP[m[1].toLowerCase()]; s = s.slice(m[0].length); }
+
+  const tokens = [], warn = [];
+  let i = 0, free = 0;                        // free = unattached numeric deltas
+  const last = () => {
+    if(!tokens.length) throw new Error("A modification must follow a residue.");
+    return tokens[tokens.length-1];
+  };
+  while(i < s.length){
+    const ch = s[i];
+    if(ch === "-" || ch === "." || ch === "," || ch === "_"){ i++; continue; }
+    if(ch === "[" || ch === "("){
+      const close = ch === "[" ? "]" : ")";
+      const j = s.indexOf(close, i);
+      if(j < 0) throw new Error("Unclosed \u201c" + ch + "\u201d in the sequence.");
+      const body = s.slice(i+1, j); i = j + 1;
+      if(!body) continue;
+      const key = body.toLowerCase().replace(/[\s_]/g,"");
+      if(ch === "[" && NSAA_LOOKUP[key]){                       // non-standard residue
+        const r = NSAA[NSAA_LOOKUP[key]];
+        tokens.push({code:"[" + NSAA_LOOKUP[key] + "]", label:r.name, counts:parseFormulaTerm(r.f), mods:[]});
+      }else if(NUM_RE.test(body) && !tokens.length){            // leading free delta
+        free += parseFloat(body);
+      }else{
+        const t = last();
+        const md = makeMod(body, t.code);
+        t.mods.push(md);
+        const spec = MODAA[md.key] && MODAA[md.key].on;        // residue-specific chemistry
+        if(spec && t.code !== spec)
+          warn.push(MODAA[md.key].name + " is placed on " + t.code + tokens.length
+                    + "; this chemistry normally occurs on " + spec + ".");
+      }
+      continue;
+    }
+    if(/[A-Za-z]/.test(ch)){
+      const u = ch.toUpperCase();
+      if(!(u in RES)) throw new Error("Unknown residue letter \u201c" + ch
+          + "\u201d — non-standard residues go in square brackets, e.g. [Nle].");
+      tokens.push({code:u, label:RES[u][1], counts:parseFormulaTerm(RES[u][2]), mods:[]});
+      i++; continue;
+    }
+    throw new Error("Unexpected character \u201c" + ch + "\u201d in the sequence.");
+  }
+  if(!tokens.length) throw new Error("No residues found.");
+  return {tokens, nmod, cterm, free, warn};
+}
+
+/* composition + mass of a token list */
+function tokensCounts(tokens, nmod, cterm){
+  let counts = parseFormulaExpr("H2O"), extra = 0;
+  for(const t of tokens){
+    counts = addCounts(counts, t.counts);
+    for(const md of t.mods){
+      if(md.counts) counts = addCounts(counts, md.counts);
+      extra += md.delta || 0;
+    }
+  }
+  if(cterm === "NH2") counts = addCounts(counts, parseFormulaExpr("NH3-H2O"));
+  if(nmod && MODAA[nmod] && MODAA[nmod].f) counts = addCounts(counts, parseFormulaExpr(MODAA[nmod].f));
+  return {counts, extra};
+}
+function tokensMass(tokens, nmod, cterm, mode, freeDelta){
+  const c = tokensCounts(tokens, nmod, cterm);
+  return massOfCounts(c.counts, mode) + c.extra + (freeDelta || 0);
+}
+/* mass of one residue incl. its modifications */
+function tokenMass(t, mode){
+  let m = massOfCounts(t.counts, mode);
+  for(const md of t.mods) m += md.counts ? massOfCounts(md.counts, mode) : (md.delta || 0);
+  return m;
+}
+function modMass(md, mode){ return md.counts ? massOfCounts(md.counts, mode) : (md.delta || 0); }
+function tokenText(t){
+  return t.code + t.mods.map(md => "(" + (md.key === "num" ? md.name : md.key) + ")").join("");
+}
+function seqText(tokens){ return tokens.map(tokenText).join(""); }
+
+/* ---- m/z ---- */
+function mzOf(M, z, carrierMass){ return (M + z*carrierMass)/z; }
+function mzMulti(M, combo){                       // combo: {H:2, Na:1}
+  let z = 0, add = 0;
+  for(const k in combo){ z += combo[k]; add += combo[k]*CARRIERS[k].mass; }
+  return {z, mz:(M + add)/z};
+}
+
+/* ============================================================
+   Build species list
+   ============================================================ */
+function buildSpecies(){
+  const mode = STATE.mode, M = STATE.M, sp = [];
+  if(M === null) return sp;
+  const T = STATE.tokens, hasSeq = T.length > 0;
+  sp.push({name:"Target peptide (full length)", cat:"parent", delta:0, mass:M,
+           note:hasSeq ? seqText(T) : ""});
+
+  /* --- modifications written into the sequence: incomplete or extra --- */
+  const tally = {};
+  if(hasSeq){
+    if(STATE.nmod){
+      const md = {key:STATE.nmod, name:MODAA[STATE.nmod].name, counts:parseFormulaExpr(MODAA[STATE.nmod].f || ""), delta:0};
+      tally[STATE.nmod] = {md, n:1, sites:["N-term"]};
+    }
+    T.forEach((t,i) => t.mods.forEach(md => {
+      const k = md.key === "num" ? "num" + md.name : md.key;
+      if(!tally[k]) tally[k] = {md, n:0, sites:[]};
+      tally[k].n++; tally[k].sites.push(t.code + (i+1));
+    }));
+  }
+  if(hasSeq && $("cbModX").checked){
+    for(const k in tally){
+      const {md, n, sites} = tally[k], dm = modMass(md, mode);
+      if(!dm) continue;
+      for(let q = 1; q <= Math.min(n,3); q++){
+        sp.push({name:"Incomplete " + md.name + (n > 1 ? " — " + q + " of " + n + " site" + (n>1?"s":"") + " unmodified" : " (site unmodified)"),
+                 cat:"loss", delta:-q*dm, mass:M - q*dm, note:"sites: " + sites.join(", ")});
+      }
+      sp.push({name:"Extra " + md.name + " (over-modification, one additional site)",
+               cat:"add", delta:dm, mass:M + dm, note:"e.g. acylation of a second nucleophile"});
+    }
+    // phospho-specific gas-phase / solution neutral losses
+    if(Object.keys(tally).some(k => k === "ph")){
+      for(const nl of [["− HPO3 (phospho neutral loss)","-HPO3"],["− H3PO4 (β-elimination)","-H3PO4"]]){
+        const d = fmass(nl[1], mode);
+        sp.push({name:nl[0], cat:"loss", delta:d, mass:M + d, note:"phosphopeptides"});
+      }
+    }
+  }
+
+  if($("cbMods").checked){
+    for(const m of MODS){
+      const d = fmass(m.f, mode);
+      sp.push({name:m.n, cat:m.c, delta:d, mass:M + d, note:m.f.replace(/-/g," − ")});
+    }
+  }
+
+  /* --- deletions: sequence-aware (modified residues included) --- */
+  if($("cbDel").checked){
+    if(hasSeq){
+      const seen = {};
+      T.forEach((t,i) => {
+        const key = tokenText(t);
+        if(!seen[key]) seen[key] = {t, pos:[]};
+        seen[key].pos.push(i+1);
+      });
+      for(const key in seen){
+        const {t, pos} = seen[key], d = tokenMass(t, mode);
+        sp.push({name:"Deletion − " + key + " (" + t.label + (t.mods.length ? ", modified" : "") + ")",
+                 cat:"del", delta:-d, mass:M - d, note:"position " + pos.join(", ")});
+      }
+    }else{
+      for(const a of AA_ORDER){
+        const d = fmass(RES[a][2], mode);
+        sp.push({name:"Deletion − " + RES[a][0] + " (" + a + ")", cat:"del", delta:-d, mass:M - d,
+                 note:"any position"});
+      }
+    }
+  }
+  /* --- insertions: the 20 standard residues, plus any modified residue present --- */
+  if($("cbIns").checked){
+    for(const a of AA_ORDER){
+      const d = fmass(RES[a][2], mode);
+      sp.push({name:"Insertion + " + RES[a][0] + " (" + a + ")", cat:"ins", delta:d, mass:M + d,
+               note:"double coupling / deletion-insertion"});
+    }
+    if(hasSeq){
+      const seen = {};
+      for(const t of T){
+        const key = tokenText(t);
+        if(key.length <= 1 || seen[key]) continue;        // plain residues already listed
+        seen[key] = 1;
+        const d = tokenMass(t, mode);
+        sp.push({name:"Insertion + " + key + " (" + t.label + ")", cat:"ins", delta:d, mass:M + d,
+                 note:"extra copy of a modified / non-standard residue"});
+      }
+    }
+  }
+  /* --- double deletions --- */
+  if(hasSeq && $("cbDouble").checked){
+    const uniq = [];
+    T.forEach(t => { const k = tokenText(t); if(!uniq.some(u => u.k === k)) uniq.push({k, t, n:0}); });
+    uniq.forEach(u => u.n = T.filter(t => tokenText(t) === u.k).length);
+    for(let i = 0; i < uniq.length; i++)
+      for(let j = i; j < uniq.length; j++){
+        if(i === j && uniq[i].n < 2) continue;
+        const d = tokenMass(uniq[i].t, mode) + tokenMass(uniq[j].t, mode);
+        sp.push({name:"Double deletion − " + uniq[i].k + " − " + uniq[j].k, cat:"del",
+                 delta:-d, mass:M - d, note:"two residues lost"});
+      }
+  }
+  /* --- truncation ladder --- */
+  if(hasSeq && $("cbTrunc").checked){
+    const L = T.length;
+    for(let k = 1; k < L; k++){
+      const sub = T.slice(k);                                   // N-terminal residues never coupled
+      const mN = tokensMass(sub, "", STATE.cterm, mode, 0);
+      sp.push({name:"Truncation: des-" + seqText(T.slice(0,k)) + " (" + sub.length + "-mer, N-terminal loss)",
+               cat:"trunc", delta:mN - M, mass:mN, note:seqText(sub)});
+      if($("cbCap").checked){
+        const ac = tokensMass(sub, "ac", STATE.cterm, mode, 0);
+        sp.push({name:"Capped failure sequence: Ac-" + seqText(sub), cat:"trunc", delta:ac - M, mass:ac,
+                 note:"acetyl-capped " + sub.length + "-mer"});
+      }
+      const sub2 = T.slice(0, L - k);
+      const mC = tokensMass(sub2, STATE.nmod, STATE.cterm, mode, STATE.free);
+      sp.push({name:"Truncation: des-" + seqText(T.slice(L-k)) + " (" + sub2.length + "-mer, C-terminal loss)",
+               cat:"trunc", delta:mC - M, mass:mC, note:seqText(sub2)});
+    }
+  }
+  return sp;
+}
+
+/* ============================================================
+   Rendering
+   ============================================================ */
+function catTag(c){
+  const map = {parent:["",""], add:["add","addition"], loss:["loss","loss"], adduct:["adduct","adduct"],
+               del:["del","deletion"], ins:["ins","insertion"], trunc:["trunc","truncation"]};
+  if(c === "parent") return '<span class="tag">target</span>';
+  const m = map[c] || ["",c];
+  return '<span class="tag ' + m[0] + '">' + m[1] + '</span>';
+}
+
+function renderCharge(){
+  const t = $("chargeTable");
+  if(STATE.M === null){ t.innerHTML = '<tr><td class="muted">Enter a sequence or a mass above.</td></tr>'; return; }
+  const lo = parseFloat($("mzmin").value), hi = parseFloat($("mzmax").value);
+  let h = "<thead><tr><th>z</th><th class='num'>[M+zH]<sup>z+</sup></th>"
+        + "<th class='num'>[M+(z−1)H+Na]<sup>z+</sup></th><th class='num'>[M+(z−1)H+K]<sup>z+</sup></th>"
+        + "<th class='num'>[M+zNa]<sup>z+</sup></th><th class='num'>[M−zH]<sup>z−</sup></th>"
+        + "<th class='num'>[M+zH+TFA]<sup>z+</sup></th></tr></thead><tbody>";
+  const M = STATE.M, tfa = fmass("C2HF3O2", STATE.mode);
+  for(let z = 1; z <= 10; z++){
+    const a = mzOf(M, z, CARRIERS.H.mass);
+    const b = (M + (z-1)*CARRIERS.H.mass + CARRIERS.Na.mass)/z;
+    const c = (M + (z-1)*CARRIERS.H.mass + CARRIERS.K.mass)/z;
+    const d = mzOf(M, z, CARRIERS.Na.mass);
+    const e = (M - z*CARRIERS.H.mass)/z;
+    const g = mzOf(M + tfa, z, CARRIERS.H.mass);
+    const outside = (a < lo || a > hi);
+    h += "<tr class='" + (outside ? "out" : "") + "'><td><b>" + z + "+</b></td>"
+       + "<td class='num'>" + fm(a) + "</td><td class='num'>" + fm(b) + "</td><td class='num'>" + fm(c) + "</td>"
+       + "<td class='num'>" + fm(d) + "</td><td class='num'>" + fm(e) + "</td><td class='num'>" + fm(g) + "</td></tr>";
+  }
+  t.innerHTML = h + "</tbody>";
+}
+
+function renderImpurities(){
+  const t = $("impTable");
+  if(STATE.M === null){ t.innerHTML = '<tr><td class="muted">Enter a sequence or a mass above.</td></tr>'; return; }
+  const zmax = parseInt($("zshow").value,10);
+  const q = $("filter").value.trim().toLowerCase();
+  let rows = STATE.species;
+  if(q) rows = rows.filter(r => (r.name + " " + r.note).toLowerCase().includes(q));
+  let h = "<thead><tr><th>Species</th><th>Type</th><th class='num'>Δ mass</th><th class='num'>Neutral M</th>";
+  for(let z = 1; z <= zmax; z++) h += "<th class='num'>[M+" + z + "H]<sup>" + z + "+</sup></th>";
+  h += "<th>Note</th></tr></thead><tbody>";
+  for(const r of rows){
+    h += "<tr><td>" + r.name + "</td><td>" + catTag(r.cat) + "</td>"
+       + "<td class='num'>" + (r.delta > 0 ? "+" : "") + fm(r.delta) + "</td>"
+       + "<td class='num'><b>" + fm(r.mass) + "</b></td>";
+    for(let z = 1; z <= zmax; z++) h += "<td class='num'>" + fm(mzOf(r.mass, z, CARRIERS.H.mass)) + "</td>";
+    h += "<td class='muted'>" + r.note + "</td></tr>";
+  }
+  t.innerHTML = h + "</tbody>";
+  $("impCount").textContent = rows.length + " species listed" + (q ? " (filtered)" : "");
+}
+
+/* ============================================================
+   Neutral adducts searched on the Identify tab.
+   Each one is added to EVERY candidate species before the charge
+   carriers are applied, so a TFA adduct of a truncation is found
+   just as readily as a TFA adduct of the target peptide.
+   ============================================================ */
+const NEUTRAL_ADDUCTS = [
+  {id:"adTFA",  short:"TFA",        label:"TFA (trifluoroacetate)",   f:"C2HF3O2",  on:true},
+  {id:"adTFA2", short:"2×TFA",      label:"2 × TFA",                  f:"C4H2F6O4", on:false},
+  {id:"adTFA3", short:"3×TFA",      label:"3 × TFA",                  f:"C6H3F9O6", on:false},
+  {id:"adNa",   short:"Na salt",    label:"Na salt (Na−H)",           f:"Na-H",     on:true},
+  {id:"adNa2",  short:"2×Na salt",  label:"2 × Na salt",              f:"Na2-H2",   on:false},
+  {id:"adK",    short:"K salt",     label:"K salt (K−H)",             f:"K-H",      on:false},
+  {id:"adFA",   short:"HCOOH",      label:"Formic acid",              f:"CH2O2",    on:false},
+  {id:"adAcOH", short:"AcOH",       label:"Acetic acid",              f:"C2H4O2",   on:false},
+  {id:"adACN",  short:"ACN",        label:"Acetonitrile",             f:"C2H3N",    on:false},
+  {id:"adDMSO", short:"DMSO",       label:"DMSO",                     f:"C2H6OS",   on:false},
+  {id:"adH2O",  short:"−H2O",       label:"Water loss (−H2O)",        f:"-H2O",     on:false}
+];
+function buildAdductBox(){
+  const box = $("adductBox");
+  box.innerHTML = "";
+  for(const a of NEUTRAL_ADDUCTS){
+    const d = document.createElement("div");
+    d.className = "chk";
+    d.innerHTML = '<input type="checkbox" id="' + a.id + '"' + (a.on ? " checked" : "") + '><span>'
+                + a.label + ' <span class="muted mono">' + (fmass(a.f,"mono") >= 0 ? "+" : "")
+                + fmass(a.f,"mono").toFixed(4) + '</span></span>';
+    box.appendChild(d);
+  }
+}
+
+/* ---- peak matching ---- */
+function carrierCombos(z, sel){
+  // carrier multisets of total count z: any mixture with ≤2 non-H carriers,
+  // plus the pure ladders (e.g. [M+3Na]3+) that the charge-state tab shows
+  const out = [];
+  for(const k of sel){ if(k !== "H"){ const c = {}; c[k] = z; out.push(c); } }
+  const nonH = sel.filter(c => c !== "H");
+  const rec = (i, left, combo, nonHcount) => {
+    if(i === nonH.length){
+      if(left > 0){ if(!sel.includes("H")) return; combo = Object.assign({}, combo); combo.H = left; }
+      else if(left < 0) return;
+      if(Object.keys(combo).length) out.push(combo);
+      return;
+    }
+    const maxN = Math.min(left, 2 - nonHcount);
+    for(let n = 0; n <= maxN; n++){
+      const c2 = Object.assign({}, combo); if(n) c2[nonH[i]] = n;
+      rec(i+1, left-n, c2, nonHcount+n);
+    }
+  };
+  rec(0, z, {}, 0);
+  const seen = {}, uniq = [];                     // the pure ladders overlap rec() at z ≤ 2
+  for(const c of out){
+    const key = ["H","Na","K","NH4"].map(k => k + (c[k] || 0)).join("");
+    if(!seen[key]){ seen[key] = 1; uniq.push(c); }
+  }
+  return uniq;
+}
+function comboLabel(combo){
+  const parts = [];
+  for(const k of ["H","Na","K","NH4"]) if(combo[k]) parts.push((combo[k] > 1 ? combo[k] : "") + CARRIERS[k].label);
+  return "[M+" + parts.join("+") + "]";
+}
+function runMatch(){
+  const t = $("matchTable"), msg = $("matchmsg");
+  msg.innerHTML = "";
+  if(STATE.M === null){ msg.innerHTML = '<div class="err">Define the peptide first.</div>'; return; }
+  const peaks = ($("peaks").value.match(/-?\d+(\.\d+)?/g) || []).map(Number);
+  if(!peaks.length){ msg.innerHTML = '<div class="err">No numeric m/z values found in the box.</div>'; return; }
+  const tol = parseFloat($("tol").value), ppm = $("tolunit").value === "ppm";
+  const neg = $("negmode").checked;
+  const sel = ["H","Na","K","NH4"].filter(k => $({H:"carH",Na:"carNa",K:"carK",NH4:"carNH4"}[k]).checked);
+  if(!neg && !sel.length){ msg.innerHTML = '<div class="err">Select at least one charge carrier.</div>'; return; }
+
+  // candidate species (optionally pairs of modifications).
+  // cat 'adduct' rows are dropped here — the neutral-adduct selector below
+  // applies those systematically to every species instead of only the parent.
+  let cands = STATE.species.filter(s => s.cat !== "adduct")
+                           .map(s => ({name:s.name, mass:s.mass, cat:s.cat}));
+  if($("cbPairs").checked){
+    const base = STATE.species.filter(s => s.cat !== "parent" && s.cat !== "adduct");
+    const lim = Math.min(base.length, 70);
+    for(let i = 0; i < lim; i++)
+      for(let j = i; j < lim; j++){
+        const a = base[i], b = base[j];
+        if(a.cat === "trunc" && b.cat === "trunc") continue;
+        const mass = (a.cat === "trunc" ? a.mass + b.delta : STATE.M + a.delta + b.delta);
+        cands.push({name:a.name + "  ⊕  " + b.name, mass, cat:"combo"});
+      }
+  }
+  // expand every candidate by each selected neutral adduct
+  const adducts = NEUTRAL_ADDUCTS.filter(a => $(a.id) && $(a.id).checked);
+  if(adducts.length){
+    const plain = cands;
+    cands = plain.slice();
+    for(const a of adducts){
+      const d = fmass(a.f, STATE.mode);
+      for(const c of plain) cands.push({name:c.name + "  +  " + a.short, mass:c.mass + d, cat:c.cat, add:a.short});
+    }
+  }
+
+  const combosByZ = {};
+  for(let z = 1; z <= 10; z++) combosByZ[z] = neg ? [{Hneg:z}] : carrierCombos(z, sel);
+
+  let h = "<thead><tr><th class='num'>Observed m/z</th><th class='num'>z</th><th>Ion</th><th>Assignment</th>"
+        + "<th class='num'>Calc m/z</th><th class='num'>Δ (Da)</th><th class='num'>Δ (ppm)</th>"
+        + "<th class='num'>Neutral M</th></tr></thead><tbody>";
+  let anyHit = false;
+  for(const p of peaks){
+    const hits = [];
+    for(const c of cands){
+      for(let z = 1; z <= 10; z++){
+        for(const combo of combosByZ[z]){
+          const mz = neg ? (c.mass - z*CARRIERS.H.mass)/z : mzMulti(c.mass, combo).mz;
+          const dDa = p - mz, dppm = dDa/mz*1e6;
+          const ok = ppm ? Math.abs(dppm) <= tol : Math.abs(dDa) <= tol;
+          if(ok) hits.push({c, z, combo, mz, dDa, dppm, neg});
+        }
+      }
+    }
+    hits.sort((a,b) => Math.abs(a.dppm) - Math.abs(b.dppm));
+    const top = hits.slice(0,6);
+    if(!top.length){
+      const dz = [];
+      for(let z = 1; z <= 10; z++) dz.push(z + "+: " + fm(z*(p - CARRIERS.H.mass)));
+      h += "<tr><td class='num'><b>" + f4(p) + "</b></td><td colspan='7' class='muted'>no match — "
+         + "neutral mass if charge is … " + dz.join(" · ") + "</td></tr>";
+      continue;
+    }
+    anyHit = true;
+    top.forEach((x,i) => {
+      h += "<tr class='" + (i === 0 ? "hit" : "") + "'>"
+         + "<td class='num'>" + (i === 0 ? "<b>" + f4(p) + "</b>" : "") + "</td>"
+         + "<td class='num'>" + x.z + (x.neg ? "−" : "+") + "</td>"
+         + "<td class='mono'>" + (x.neg ? "[M−" + (x.z > 1 ? x.z : "") + "H]" : comboLabel(x.combo)) + "</td>"
+         + "<td>" + x.c.name + "</td>"
+         + "<td class='num'>" + fm(x.mz) + "</td>"
+         + "<td class='num'>" + (x.dDa >= 0 ? "+" : "") + x.dDa.toFixed(4) + "</td>"
+         + "<td class='num'>" + (x.dppm >= 0 ? "+" : "") + x.dppm.toFixed(1) + "</td>"
+         + "<td class='num'>" + fm(x.c.mass) + "</td></tr>";
+    });
+  }
+  t.innerHTML = h + "</tbody>";
+  const carrierTxt = neg ? "[M−zH]" : sel.map(k => CARRIERS[k].label).join(", ");
+  msg.innerHTML = '<div class="' + (anyHit ? "ok" : "err") + '">Searched ' + cands.length
+    + ' candidate species × z = 1–10 · carriers: ' + carrierTxt
+    + ' · neutral adducts: ' + (adducts.length ? "free + " + adducts.map(a => a.short).join(", ") : "free only")
+    + '. ' + (anyHit ? "Best match per peak is highlighted."
+    : "Nothing within tolerance — widen the tolerance, switch mass type, or tick more adducts.") + '</div>';
+}
+
+/* ---- examples + N-terminal menu ---- */
+function loadExample(s){ $("seq").value = s; update(); window.scrollTo({top:0,behavior:"smooth"}); }
+function buildNtermMenu(){
+  const sel = $("nterm");
+  sel.innerHTML = "";
+  for(const k of NTERM_CHOICES){
+    const o = document.createElement("option");
+    o.value = k;
+    o.textContent = k === "" ? "Free amine (H)"
+                  : MODAA[k].name + " (" + fmass(MODAA[k].f,"mono").toFixed(4) + " Da)";
+    sel.appendChild(o);
+  }
+}
+
+/* ---- reference tables ---- */
+function renderReference(){
+  let hm = "<thead><tr><th>Code</th><th>Aliases</th><th>Modification</th><th>Group</th><th>Composition</th>"
+         + "<th class='num'>Δ monoisotopic</th><th class='num'>Δ average</th></tr></thead><tbody>";
+  const groups = ["acyl / epigenetic","monoaminylation (TG2, Gln)","other PTM","label / lipid"];
+  for(const g of groups){
+    for(const k in MODAA){
+      const m = MODAA[k]; if(m.grp !== g) continue;
+      const mono = m.f === null ? null : fmass(m.f,"mono");
+      hm += "<tr><td class='mono'><b>" + k + "</b></td><td class='mono muted'>" + ((m.alias||[]).join(", ") || "—")
+          + "</td><td>" + m.name + "</td><td class='muted'>" + g + "</td>"
+          + "<td class='mono'>" + (m.f === null ? "context-dependent" : (m.f || "none"))
+          + (m.src ? " <span class='muted'>(" + m.src + ")</span>" : "") + "</td>"
+          + "<td class='num'>" + (mono === null ? "—" : (mono >= 0 ? "+" : "") + mono.toFixed(4)) + "</td>"
+          + "<td class='num'>" + (mono === null ? "—" : (mono >= 0 ? "+" : "") + fmass(m.f,"avg").toFixed(4)) + "</td></tr>";
+    }
+  }
+  $("refModAA").innerHTML = hm + "</tbody>";
+
+  let hn = "<thead><tr><th>Code</th><th>Aliases</th><th>Residue</th><th>Residue formula</th>"
+         + "<th class='num'>Monoisotopic</th><th class='num'>Average</th></tr></thead><tbody>";
+  for(const k in NSAA){
+    const r = NSAA[k];
+    hn += "<tr><td class='mono'><b>[" + k + "]</b></td><td class='mono muted'>"
+        + ((r.alias||[]).map(a => "[" + a + "]").join(", ") || "—") + "</td><td>" + r.name + "</td>"
+        + "<td class='mono'>" + r.f + "</td><td class='num'>" + fmass(r.f,"mono").toFixed(4) + "</td>"
+        + "<td class='num'>" + fmass(r.f,"avg").toFixed(4) + "</td></tr>";
+  }
+  $("refNSAA").innerHTML = hn + "</tbody>";
+  let h = "<thead><tr><th>1-letter</th><th>3-letter</th><th>Name</th><th>Residue formula</th>"
+        + "<th class='num'>Monoisotopic</th><th class='num'>Average</th>"
+        + "<th class='num'>Immonium (approx.)</th></tr></thead><tbody>";
+  for(const a of AA_ORDER){
+    const r = RES[a], mono = fmass(r[2],"mono"), avg = fmass(r[2],"avg");
+    h += "<tr><td><b>" + a + "</b></td><td>" + r[0] + "</td><td>" + r[1] + "</td><td class='mono'>" + r[2] + "</td>"
+       + "<td class='num'>" + mono.toFixed(4) + "</td><td class='num'>" + avg.toFixed(4) + "</td>"
+       + "<td class='num'>" + (mono - 26.00307).toFixed(4) + "</td></tr>";
+  }
+  $("refRes").innerHTML = h + "</tbody>";
+
+  h = "<thead><tr><th>Modification / adduct</th><th>Type</th><th>Composition</th>"
+    + "<th class='num'>Δ monoisotopic</th><th class='num'>Δ average</th></tr></thead><tbody>";
+  for(const m of MODS){
+    h += "<tr><td>" + m.n + "</td><td>" + catTag(m.c) + "</td><td class='mono'>" + m.f.replace(/-/g," − ") + "</td>"
+       + "<td class='num'>" + fmass(m.f,"mono").toFixed(4) + "</td>"
+       + "<td class='num'>" + fmass(m.f,"avg").toFixed(4) + "</td></tr>";
+  }
+  $("refMod").innerHTML = h + "</tbody>";
+
+  h = "<thead><tr><th>Constant</th><th class='num'>Monoisotopic</th><th class='num'>Average</th></tr></thead><tbody>";
+  const consts = [["Proton (H⁺)", CARRIERS.H.mass, CARRIERS.H.mass],
+                  ["Sodium (Na⁺)", CARRIERS.Na.mass, fmass("Na","avg") - ELECTRON],
+                  ["Potassium (K⁺)", CARRIERS.K.mass, fmass("K","avg") - ELECTRON],
+                  ["Ammonium (NH₄⁺)", CARRIERS.NH4.mass, fmass("NH4","avg") - ELECTRON],
+                  ["Water (H₂O)", fmass("H2O","mono"), fmass("H2O","avg")],
+                  ["Ammonia (NH₃)", fmass("NH3","mono"), fmass("NH3","avg")],
+                  ["C-terminal amide (−0.98)", fmass("NH3-H2O","mono"), fmass("NH3-H2O","avg")],
+                  ["N-terminal acetyl", fmass("C2H2O","mono"), fmass("C2H2O","avg")],
+                  ["Electron", ELECTRON, ELECTRON]];
+  for(const c of consts) h += "<tr><td>" + c[0] + "</td><td class='num'>" + c[1].toFixed(5)
+                            + "</td><td class='num'>" + c[2].toFixed(5) + "</td></tr>";
+  $("refConst").innerHTML = h + "</tbody>";
+}
+
+/* ---- CSV export ---- */
+function exportTable(id, filename){
+  const t = $(id); if(!t || !t.rows.length) return;
+  const lines = [];
+  for(const row of t.rows){
+    const cells = [];
+    for(const c of row.cells){
+      let v = c.innerText.replace(/\s+/g," ").trim().replace(/"/g,'""');
+      cells.push('"' + v + '"');
+    }
+    lines.push(cells.join(","));
+  }
+  const blob = new Blob([lines.join("\n")], {type:"text/csv"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+
+/* ============================================================
+   Main update
+   ============================================================ */
+function update(){
+  STATE.mode  = $("masstype").value;
+  STATE.nmod  = $("nterm").value;
+  STATE.cterm = $("cterm").value;
+  const msg = $("inputmsg"); msg.innerHTML = "";
+  const raw = $("seq").value.trim();
+  STATE.seq = null; STATE.counts = null; STATE.M = null; STATE.tokens = []; STATE.free = 0;
+
+  if(raw){
+    try{
+      const p = parseSequence(raw);
+      if(p.nmod){ $("nterm").value = p.nmod; STATE.nmod = p.nmod; }
+      if(p.cterm === "NH2" && $("cterm").value !== "NH2"){ $("cterm").value = "NH2"; STATE.cterm = "NH2"; }
+      STATE.tokens = p.tokens; STATE.free = p.free;
+      STATE.seq = seqText(p.tokens);
+      const c = tokensCounts(p.tokens, STATE.nmod, STATE.cterm);
+      STATE.counts = c.counts;
+      STATE.M = massOfCounts(c.counts, STATE.mode) + c.extra + p.free;
+      $("mass").value = STATE.M.toFixed(4);
+      const nMods = p.tokens.reduce((a,t) => a + t.mods.filter(m => modMass(m,"mono") !== 0).length, 0);
+      msg.innerHTML = '<div class="ok">' + p.tokens.length + ' residues · ' + STATE.seq
+        + ' · N-term: ' + (STATE.nmod ? MODAA[STATE.nmod].name : "free amine")
+        + ' · C-term: ' + (STATE.cterm === "NH2" ? "amide" : "free acid")
+        + (nMods ? ' · ' + nMods + ' side-chain modification' + (nMods > 1 ? "s" : "") : "")
+        + (c.extra ? ' · includes user-entered delta ' + c.extra.toFixed(4) + ' Da' : "")
+        + (p.free ? ' · leading delta ' + p.free.toFixed(4) + ' Da' : "") + '</div>'
+        + (p.warn.length ? '<div class="warnbox">Check: ' + p.warn.join(" ") + ' The mass is still computed as written.</div>' : "");
+    }catch(e){
+      msg.innerHTML = '<div class="err">' + e.message + ' — falling back to the mass box.</div>';
+      STATE.seq = null; STATE.counts = null; STATE.tokens = [];
+    }
+  }
+  if(STATE.M === null){
+    const v = parseFloat($("mass").value);
+    if(isFinite(v) && v > 0) STATE.M = v;
+  }
+  $("outM")       .textContent = STATE.M === null ? "—" : fm(STATE.M);
+  $("outMH")      .textContent = STATE.M === null ? "—" : fm(mzOf(STATE.M,1,CARRIERS.H.mass));
+  $("outM2H")     .textContent = STATE.M === null ? "—" : fm(mzOf(STATE.M,2,CARRIERS.H.mass));
+  $("outFormula") .textContent = STATE.counts
+      ? formulaString(STATE.counts) + ((STATE.free || (STATE.tokens.some(t => t.mods.some(m => m.key === "num")))) ? " + Δ" : "")
+      : "—";
+
+  STATE.species = buildSpecies();
+  renderCharge();
+  renderImpurities();
+}
+
+/* ---- wiring ---- */
+document.querySelectorAll("#tabs button").forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll("#tabs button").forEach(x => x.classList.remove("active"));
+    document.querySelectorAll(".tabpane").forEach(x => x.classList.remove("active"));
+    b.classList.add("active");
+    $("tab-" + b.dataset.tab).classList.add("active");
+  };
+});
+["seq","mass","masstype","nterm","cterm","mzmin","mzmax","zshow","filter",
+ "cbMods","cbDel","cbIns","cbModX","cbTrunc","cbCap","cbDouble"].forEach(id => {
+  const el = $(id);
+  el.addEventListener(el.type === "checkbox" || el.tagName === "SELECT" ? "change" : "input", update);
+});
+buildNtermMenu();
+buildAdductBox();
+renderReference();
+update();
+</script>
+</body>
+</html>

@@ -107,11 +107,12 @@
     document.body.appendChild(n); setTimeout(function () { n.remove(); }, 5000);
   }
 
-  window.LabFigure = { downloadSvg: downloadSvg, downloadPng: downloadPng, build: build };
+  window.LabFigure = { downloadSvg: downloadSvg, downloadPng: downloadPng, build: build, save: save, cleanName: cleanName };
 
   // Site bar linking back to the tools index
+  var NOBAR = document.currentScript && document.currentScript.hasAttribute("data-nobar");
   function addBar() {
-    if (document.querySelector(".labtools-bar")) return;
+    if (NOBAR || document.querySelector(".labtools-bar")) return;
     var css = document.createElement("style");
     css.textContent = ".labtools-bar{display:flex;gap:16px;align-items:center;padding:6px max(16px,env(safe-area-inset-left,0px));" +
       "font:500 12px 'IBM Plex Sans',system-ui,sans-serif;background:var(--surface-alt,#f2f5f4);border-bottom:1px solid var(--border,#dbe3e1)}" +

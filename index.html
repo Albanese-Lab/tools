@@ -49,7 +49,7 @@
   <header>
     <span class="eyebrow">Albanese Lab · Wake Forest University</span>
     <h1>Albanese Lab Tools</h1>
-    <p>Plot raw instrument exports in your browser and save publication-ready figures as PNG or SVG. Each tool overlays several samples per panel and shows the processed numbers in a data table.</p>
+    <p>Plot raw instrument exports, calculate peptide masses and survey PDB ligand sites in your browser. Every chart can be saved as a publication-ready PNG or SVG.</p>
   </header>
 
   <h2>Spectroscopy and calorimetry</h2>
@@ -87,6 +87,20 @@
       <h3>Biotage Flash Plotter</h3>
       <p>Isolera flash runs: normalized UV with the %B gradient on a second axis. Includes demo data to try it out.</p>
       <span class="input">Input: Isolera .csv export</span>
+    </a>
+  </div>
+
+  <h2>Peptides and structures</h2>
+  <div class="grid">
+    <a class="tool" href="peptide-ms.html">
+      <h3>SPPS Peptide Mass Calculator</h3>
+      <p>Charge-state ladders, synthesis impurities and adducts, and matching of observed m/z peaks, including histone PTMs and monoaminylation.</p>
+      <span class="input">Input: sequence or mass</span>
+    </a>
+    <a class="tool" href="ligand-explorer.html">
+      <h3>Ligand Microenvironment Explorer</h3>
+      <p>Finds every PDB structure containing a chemical component, surveys the residues around it, and exports motifs, contigs and QM inputs.</p>
+      <span class="input">Input: PDB component ID (live RCSB search)</span>
     </a>
   </div>
 

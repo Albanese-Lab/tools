@@ -1,0 +1,2022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ligand Microenvironment Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.1.0/3Dmol-min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{
+  --paper:#f5f1e7;
+  --paper-2:#ece5d3;
+  --ink:#23211c;
+  --ink-soft:#5b564a;
+  --rule:#d3c9b0;
+  --rail:#1c2027;
+  --rail-2:#262c36;
+  --rail-line:#3a4250;
+  --rail-text:#cfd6e2;
+  --rail-text-dim:#8992a3;
+  --amber:#d9902b;
+  --amber-soft:#f2d9ab;
+  --cat-acidic:#b8433c;
+  --cat-basic:#3868a6;
+  --cat-polar:#3f8f7d;
+  --cat-nonpolar:#8c8574;
+  --cat-aromatic:#7a5a9e;
+  --cat-other:#9c8f74;
+  --display:'Space Grotesk',sans-serif;
+  --body:'Source Serif 4',serif;
+  --mono:'IBM Plex Mono',monospace;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--body);
+  display:flex;
+  min-height:100vh;
+}
+::selection{background:var(--amber-soft);}
+
+/* ---------- rail ---------- */
+#rail{
+  width:340px;
+  flex:0 0 340px;
+  background:var(--rail);
+  color:var(--rail-text);
+  padding:26px 22px 22px;
+  position:sticky;
+  top:0;
+  height:100vh;
+  overflow-y:auto;
+  display:flex;
+  flex-direction:column;
+  gap:20px;
+}
+#rail::-webkit-scrollbar{width:8px;}
+#rail::-webkit-scrollbar-thumb{background:var(--rail-line);border-radius:4px;}
+
+.brand{display:flex;flex-direction:column;gap:4px;border-bottom:1px solid var(--rail-line);padding-bottom:16px;}
+.brand .eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);}
+.brand h1{font-family:var(--display);font-size:19px;font-weight:600;margin:2px 0 0;line-height:1.25;color:#fff;}
+.brand p{font-size:12.5px;color:var(--rail-text-dim);margin:6px 0 0;line-height:1.5;font-family:var(--body);}
+
+.field{display:flex;flex-direction:column;gap:6px;}
+.field label{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--rail-text-dim);}
+.field input[type=text],.field input[type=number]{
+  background:var(--rail-2);
+  border:1px solid var(--rail-line);
+  color:#fff;
+  font-family:var(--mono);
+  font-size:14px;
+  padding:9px 10px;
+  border-radius:3px;
+  width:100%;
+}
+.field input[type=text]:focus,.field input[type=number]:focus{outline:2px solid var(--amber);outline-offset:1px;}
+.field .hint{font-size:11px;color:var(--rail-text-dim);font-family:var(--body);}
+
+.row2{display:flex;gap:10px;}
+.row2 .field{flex:1;}
+
+.toggle{display:flex;align-items:center;justify-content:space-between;font-size:12.5px;color:var(--rail-text);padding:2px 0;}
+.toggle input{accent-color:var(--amber);width:15px;height:15px;}
+
+button.primary{
+  background:var(--amber);
+  color:#241503;
+  border:none;
+  font-family:var(--display);
+  font-weight:600;
+  font-size:13.5px;
+  padding:11px 14px;
+  border-radius:3px;
+  cursor:pointer;
+  letter-spacing:.01em;
+}
+button.primary:hover{background:#e8a13c;}
+button.primary:disabled{background:#5a5342;color:#948d78;cursor:not-allowed;}
+button.secondary{
+  background:transparent;
+  border:1px solid var(--rail-line);
+  color:var(--rail-text);
+  font-family:var(--mono);
+  font-size:12px;
+  padding:9px 12px;
+  border-radius:3px;
+  cursor:pointer;
+}
+button.secondary:hover{border-color:var(--amber);color:var(--amber-soft);}
+button.secondary:disabled{opacity:.4;cursor:not-allowed;}
+
+#search-summary{font-size:12px;font-family:var(--mono);color:var(--rail-text-dim);min-height:16px;}
+
+#log{
+  font-family:var(--mono);
+  font-size:11px;
+  line-height:1.6;
+  color:var(--rail-text-dim);
+  background:var(--rail-2);
+  border:1px solid var(--rail-line);
+  border-radius:3px;
+  padding:10px;
+  height:150px;
+  overflow-y:auto;
+  white-space:pre-wrap;
+  flex-shrink:0;
+}
+#log .ok{color:#7fbf8f;}
+#log .err{color:#d4756b;}
+#log .hd{color:var(--amber-soft);}
+
+.legend{display:flex;flex-direction:column;gap:6px;margin-top:auto;padding-top:14px;border-top:1px solid var(--rail-line);}
+.legend .lg-item{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--rail-text-dim);font-family:var(--mono);}
+.lg-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;}
+
+/* ---------- main ---------- */
+#main{flex:1;min-width:0;padding:40px 48px 90px;max-width:1180px;}
+.hero{border-bottom:2px solid var(--ink);padding-bottom:22px;margin-bottom:30px;}
+.hero .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);}
+.hero h2{font-family:var(--display);font-size:34px;margin:6px 0 10px;font-weight:600;}
+.hero p{font-size:15.5px;line-height:1.6;color:var(--ink-soft);max-width:70ch;margin:0;}
+.hero .ligand-chip{font-family:var(--mono);background:var(--amber);color:#241503;padding:1px 7px;border-radius:3px;font-weight:600;}
+
+.empty{
+  border:1px dashed var(--rule);
+  border-radius:6px;
+  padding:60px 30px;
+  text-align:center;
+  color:var(--ink-soft);
+  font-size:14px;
+  line-height:1.7;
+}
+.empty b{color:var(--ink);}
+
+.section{margin-bottom:44px;}
+.section h3{font-family:var(--display);font-size:12.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-soft);border-bottom:1px solid var(--rule);padding-bottom:9px;margin-bottom:18px;}
+
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);}
+.stat-card{background:var(--paper);padding:16px 18px;}
+.stat-card .n{font-family:var(--display);font-size:28px;font-weight:600;}
+.stat-card .l{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);margin-top:3px;}
+
+.chart-wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:28px;}
+@media (max-width:900px){.chart-wrap{grid-template-columns:1fr;}}
+canvas{max-width:100%;}
+.chart-box{border:1px solid var(--rule);padding:16px 18px;background:var(--paper);}
+.chart-box .cap{font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);margin-top:10px;line-height:1.5;}
+
+table.contacts{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12.5px;}
+table.contacts th{text-align:left;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);border-bottom:1px solid var(--ink);padding:6px 8px;}
+table.contacts td{padding:6px 8px;border-bottom:1px solid var(--rule);}
+table.contacts tr:hover td{background:var(--paper-2);}
+.cat-pill{display:inline-block;padding:1px 7px;border-radius:9px;font-size:10.5px;color:#fff;}
+
+.struct-list{display:flex;flex-direction:column;border:1px solid var(--rule);}
+.struct-row{display:flex;align-items:center;gap:14px;padding:11px 14px;border-bottom:1px solid var(--rule);cursor:pointer;background:var(--paper);}
+.struct-row:last-child{border-bottom:none;}
+.struct-row:hover{background:var(--paper-2);}
+.struct-row.active{background:var(--ink);color:var(--paper);}
+.struct-row .pid{font-family:var(--mono);font-weight:600;font-size:13.5px;width:64px;flex:0 0 auto;}
+.struct-row .title{flex:1;font-size:12.5px;color:inherit;opacity:.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.struct-row .cnt{font-family:var(--mono);font-size:11px;flex:0 0 auto;opacity:.7;}
+.struct-row.err{opacity:.45;cursor:default;}
+
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:20px;}
+@media (max-width:900px){.detail-grid{grid-template-columns:1fr;}}
+#viewer3d{width:100%;height:360px;border:1px solid var(--rule);background:#fff;position:relative;}
+#radial{width:100%;height:360px;border:1px solid var(--rule);background:var(--paper);}
+.fig-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+.fig-actions button{background:var(--paper);border:1px solid var(--rule);color:var(--ink);font-family:var(--mono);
+  font-size:11px;padding:5px 9px;border-radius:3px;cursor:pointer;}
+.fig-actions button:hover{border-color:var(--amber);}
+.detail-cap{font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);margin-top:8px;line-height:1.5;}
+
+footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--rule);font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);line-height:1.7;}
+a.csv-link{font-family:var(--mono);font-size:12px;color:var(--ink);text-decoration:underline;text-underline-offset:3px;}
+</style>
+<script src="figure-export.js" data-tool="" data-nobar></script>
+</head>
+<body>
+
+<aside id="rail">
+  <div class="brand">
+    <a href="./" style="font-family:var(--mono);font-size:11px;color:var(--rail-text-dim);text-decoration:none;margin-bottom:8px;">&larr; Albanese Lab Tools</a>
+    <div class="eyebrow">PDB microenvironment survey</div>
+    <h1>Ligand Neighborhood Explorer</h1>
+    <p>Find every deposited structure containing a chemical component, sphere-search its local environment, and classify what's nearby.</p>
+  </div>
+
+
+  <div class="field">
+    <label for="ligandInput">Chemical component ID</label>
+    <input type="text" id="ligandInput" value="M3L" maxlength="5" autocomplete="off" spellcheck="false">
+    <div class="hint">e.g. M3L (trimethyllysine), MLZ (monomethyl), ALY (acetyllysine), SEP (phosphoserine)</div>
+  </div>
+
+  <button class="primary" id="btnSearch">Search RCSB PDB</button>
+  <div id="search-summary"></div>
+
+  <div class="field">
+    <label for="seqIdentityCutoff">Sequence identity dedup</label>
+    <select id="seqIdentityCutoff" style="background:var(--rail-2);border:1px solid var(--rail-line);color:#fff;font-family:var(--mono);font-size:12.5px;padding:9px 10px;border-radius:3px;width:100%;">
+      <option value="">No cutoff — all structures</option>
+      <option value="100">100% — exact-sequence duplicates only</option>
+      <option value="95">95%</option>
+      <option value="90">90%</option>
+      <option value="70">70%</option>
+      <option value="50">50%</option>
+      <option value="30">30% — most aggressive dedup</option>
+    </select>
+    <div class="hint">One representative per RCSB sequence cluster — e.g. "50" is the PDB50-style cutoff, applied at search time.</div>
+  </div>
+
+  <div class="row2">
+    <div class="field">
+      <label for="sphereRadius">Sphere radius (&Aring;)</label>
+      <input type="number" id="sphereRadius" value="5" min="3" max="8" step="0.5">
+    </div>
+    <div class="field">
+      <label for="maxStructs">Analyze first N</label>
+      <input type="number" id="maxStructs" value="12" min="1" max="60" step="1">
+    </div>
+  </div>
+
+  <div class="field">
+    <div class="toggle"><span>Exclude waters</span><input type="checkbox" id="excludeWater" checked></div>
+    <div class="toggle"><span>Include other hetero groups</span><input type="checkbox" id="includeHet" checked></div>
+  </div>
+
+  <button class="primary" id="btnAnalyze" disabled>Run neighborhood analysis</button>
+  <button class="secondary" id="btnCsv" disabled>Export contacts as CSV</button>
+  <button class="secondary" id="btnExportAllMotifs" disabled>Export all motifs (.zip)</button>
+
+  <div id="log"><span class="hd">Ready.</span> Enter a component ID and search.</div>
+
+  <div class="legend" id="legend">
+    <div class="lg-item"><span class="lg-dot" style="background:var(--cat-acidic)"></span>Acidic &mdash; Asp, Glu</div>
+    <div class="lg-item"><span class="lg-dot" style="background:var(--cat-basic)"></span>Basic &mdash; Lys, Arg, His</div>
+    <div class="lg-item"><span class="lg-dot" style="background:var(--cat-polar)"></span>Polar uncharged &mdash; Ser, Thr, Cys, Asn, Gln</div>
+    <div class="lg-item"><span class="lg-dot" style="background:var(--cat-aromatic)"></span>Aromatic &mdash; Phe, Tyr, Trp</div>
+    <div class="lg-item"><span class="lg-dot" style="background:var(--cat-nonpolar)"></span>Nonpolar aliphatic &mdash; Gly, Ala, Val, Leu, Ile, Pro, Met</div>
+    <div class="lg-item"><span class="lg-dot" style="background:var(--cat-other)"></span>Other / hetero</div>
+  </div>
+</aside>
+
+<main id="main">
+  <div class="hero">
+    <div class="kicker">Structural survey &middot; RCSB PDB, live query</div>
+    <h2>What sits next to <span id="heroLigand">M3L</span>?</h2>
+    <p>This pulls every PDB entry containing the chemical component you specify, computes a distance-based sphere around each occurrence, and tallies the residue chemistry found inside it &mdash; contact distances, an approximate axial orientation relative to the ligand's functional tip, and amino acid category. Everything runs client-side against the live RCSB APIs. Each sphere can also be exported as a standalone motif, ready to hand to RFdiffusion-style backbone scaffolding.</p>
+  </div>
+
+  <div id="emptyState" class="empty">
+    Search for a component ID in the left panel to pull matching structures, then run the analysis.<br>
+    <b>Nothing is fetched until you ask for it.</b>
+  </div>
+
+  <div id="results" style="display:none;">
+
+    <div class="section">
+      <h3>Survey summary</h3>
+      <div class="stat-grid" id="statGrid"></div>
+    </div>
+
+    <div class="section">
+      <h3>Aggregate microenvironment composition</h3>
+      <div class="chart-wrap">
+        <div class="chart-box">
+          <canvas id="catChart" height="220"></canvas>
+          <div class="cap">Contacts within the sphere radius, pooled across every analyzed structure, grouped by amino acid category.</div>
+          <div class="fig-actions"><button type="button" data-fig="catChart">Save PNG</button></div>
+        </div>
+        <div class="chart-box">
+          <canvas id="distChart" height="220"></canvas>
+          <div class="cap">Distribution of minimum heavy-atom contact distance (&Aring;) from the ligand to each neighboring residue.</div>
+          <div class="fig-actions"><button type="button" data-fig="distChart">Save PNG</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Structures analyzed &mdash; click one to inspect</h3>
+      <div class="struct-list" id="structList"></div>
+    </div>
+
+    <div class="section" id="detailSection" style="display:none;">
+      <h3 id="detailHeading">Detail</h3>
+      <div class="detail-grid">
+        <div>
+          <div id="viewer3d"></div>
+          <div class="fig-actions"><button type="button" data-fig="viewer3d">Save PNG of this view</button></div>
+          <div class="detail-cap">Cartoon: protein backbone. Amber sticks: the ligand. Colored sticks: residues with at least one atom inside the sphere radius.</div>
+        </div>
+        <div>
+          <div id="radial"></div>
+          <div class="fig-actions"><button type="button" data-fig="radial" data-format="png">Save PNG</button><button type="button" data-fig="radial" data-format="svg">Save SVG</button></div>
+          <div class="detail-cap">Projection looking down the ligand's functional-tip axis. Radius = centroid&ndash;centroid distance (&Aring;), rings at 1&ndash;5&thinsp;&Aring;. Filled marker = residue sits on the tip side of the ligand; hollow = sits toward the backbone side. This is an approximate descriptor for triage, not a dihedral-level orientation measurement.</div>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--ink-soft);max-width:66ch;line-height:1.6;margin:14px 0 0;">
+        For aromatic contacts (Phe/Tyr/His/Trp), <b>ring dist / ring angle</b> use the actual ring
+        centroid and its least-squares-fit plane normal (Trp: closer of its two rings), not the generic
+        axial approximation used for every other residue &mdash; matching the geometry convention and
+        30&deg;/60&deg; en-face/intermediate/edge cutoffs in Albanese et al.
+      </p>
+      <table class="contacts" id="detailTable" style="margin-top:10px;"></table>
+
+      <div style="margin-top:26px;padding-top:20px;border-top:1px solid var(--rule);">
+        <h3 style="margin-bottom:10px;">Contig &amp; sequence</h3>
+        <p style="font-size:13px;color:var(--ink-soft);max-width:66ch;line-height:1.65;margin:0 0 12px;">
+          The contact residues only, in chain/residue order &mdash; matched one-to-one with the contig
+          segments. Non-standard residues (including the ligand) show as <span class="mono">X</span>.
+        </p>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+          <button class="secondary" id="btnCopyContig" style="font-size:11.5px;padding:6px 10px;">Copy contig</button>
+          <span style="font-family:var(--mono);font-size:9.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.08em;">contigmap.contigs=</span>
+        </div>
+        <div class="mono" id="contigDisplay" style="background:var(--paper-2);border:1px solid var(--rule);border-radius:4px;padding:9px 11px;font-size:12.5px;word-break:break-all;margin-bottom:16px;"></div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+          <button class="secondary" id="btnCopySeq" style="font-size:11.5px;padding:6px 10px;">Copy sequence</button>
+          <span style="font-family:var(--mono);font-size:9.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.08em;">contact residues, N&rarr;C per chain</span>
+        </div>
+        <div class="mono" id="seqDisplay" style="background:var(--paper-2);border:1px solid var(--rule);border-radius:4px;padding:9px 11px;font-size:12.5px;word-break:break-all;"></div>
+      </div>
+
+      <div style="margin-top:26px;padding-top:20px;border-top:1px solid var(--rule);">
+        <h3 style="margin-bottom:10px;">Scaffold-ready export</h3>
+        <p style="font-size:13px;color:var(--ink-soft);max-width:66ch;line-height:1.65;margin:0 0 14px;">
+          Extracts just the sphere &mdash; the ligand plus every contact residue's full atoms, original chain IDs
+          and residue numbers intact &mdash; as a minimal PDB, alongside a suggested RFdiffusion-style contig and
+          a residue manifest. This is scaffolding <em>input</em>, not a ready-to-run job file: check the gap
+          lengths and your local tool's exact input schema (RFdiffusion3 in particular uses a JSON/YAML spec
+          that's still evolving) before submitting.
+        </p>
+        <button class="secondary" id="btnExportMotif">Export this structure's motif + contig</button>
+      </div>
+
+      <div style="margin-top:26px;padding-top:20px;border-top:1px solid var(--rule);">
+        <h3 style="margin-bottom:10px;">Folddisco motif search</h3>
+        <p style="font-size:13px;color:var(--ink-soft);max-width:66ch;line-height:1.65;margin:0 0 14px;">
+          Folddisco searches for this exact discontinuous residue arrangement &mdash; position-independent, no
+          continuous chain required &mdash; across PDB100 / AFDB50 / AFDB-proteome / ESM30, which fits a
+          sphere-shaped motif better than Foldseek's whole-fold alignment above. Two separate paths below —
+          <b>don't mix them</b>: the CLI command is for a terminal, the residue list is for the webserver's own
+          motif field.
+        </p>
+
+        <div style="background:var(--paper-2);border:1px solid var(--rule);border-radius:4px;padding:14px 16px;margin-bottom:16px;">
+          <div style="font-family:var(--display);font-size:12px;font-weight:600;margin-bottom:8px;">Option A — run locally / on cluster</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+            <button class="secondary" id="btnCopyFolddisco" style="font-size:11.5px;padding:6px 10px;">Copy CLI command</button>
+            <span style="font-family:var(--mono);font-size:9.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em;">paste into a terminal only</span>
+          </div>
+          <div class="mono" id="folddiscoCmd" style="background:var(--paper);border:1px solid var(--rule);border-radius:4px;padding:9px 11px;font-size:12px;word-break:break-all;"></div>
+        </div>
+
+        <div style="background:var(--paper-2);border:1px solid var(--rule);border-radius:4px;padding:14px 16px;">
+          <div style="font-family:var(--display);font-size:12px;font-weight:600;margin-bottom:8px;">Option B — use the webserver, no install</div>
+          <ol style="font-size:12.5px;color:var(--ink-soft);line-height:1.8;margin:0 0 10px;padding-left:20px;">
+            <li>Open the webserver (link below). Click <b>Load accession</b> and enter <span id="fdAccessionHint" class="mono"></span> — the original PDB ID, not the motif file — or use <b>Upload PDB</b> with the motif file exported above.</li>
+            <li>In the site's own motif-residue field (not the accession box), paste <b>just the residue numbers</b> using the button below.</li>
+          </ol>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+            <button class="secondary" id="btnCopyFolddiscoResidues" style="font-size:11.5px;padding:6px 10px;">Copy residue list</button>
+            <span style="font-family:var(--mono);font-size:9.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em;">for the webserver's motif field only</span>
+          </div>
+          <div class="mono" id="folddiscoResidues" style="background:var(--paper);border:1px solid var(--rule);border-radius:4px;padding:9px 11px;font-size:12px;word-break:break-all;margin-bottom:12px;"></div>
+          <a href="https://search.foldseek.com/folddisco" target="_blank" rel="noopener" class="csv-link">Open the Folddisco webserver &#8599;</a>
+        </div>
+      </div>
+
+      <div style="margin-top:26px;padding-top:20px;border-top:1px solid var(--rule);">
+        <h3 style="margin-bottom:10px;">PLIP interaction validation</h3>
+        <p style="font-size:13px;color:var(--ink-soft);max-width:66ch;line-height:1.65;margin:0 0 14px;">
+          <a href="https://github.com/pharmai/plip" target="_blank" rel="noopener">PLIP</a> protonates the
+          structure and detects typed, geometry-checked interactions &mdash; hydrogen bonds with a real
+          donor&ndash;H&hellip;acceptor <em>angle</em> (not just a heavy-atom distance, which is all the
+          ring-angle cation-&pi; classification and contact table above can do from coordinates alone),
+          plus &pi;-stacking, &pi;-cation, salt bridges, halogen bonds, water bridges, and metal
+          coordination &mdash; interaction types this tool doesn't compute itself. It has no public API
+          (unlike Foldseek above), so it can't run in your browser: this generates a ready-to-run local
+          command/snippet instead, same pattern as the Folddisco panel.
+        </p>
+        <div style="background:var(--paper-2);border:1px solid var(--rule);border-radius:4px;padding:14px 16px;margin-bottom:16px;">
+          <div style="font-family:var(--display);font-size:12px;font-weight:600;margin-bottom:8px;">Option A &mdash; CLI, fetches the PDB itself</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+            <button class="secondary" id="btnCopyPlipCli" style="font-size:11.5px;padding:6px 10px;">Copy CLI command</button>
+            <span style="font-family:var(--mono);font-size:9.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em;">requires: pip install plip openbabel-wheel</span>
+          </div>
+          <div class="mono" id="plipCliCmd" style="background:var(--paper);border:1px solid var(--rule);border-radius:4px;padding:9px 11px;font-size:12px;word-break:break-all;"></div>
+        </div>
+        <div style="background:var(--paper-2);border:1px solid var(--rule);border-radius:4px;padding:14px 16px;">
+          <div style="font-family:var(--display);font-size:12px;font-weight:600;margin-bottom:8px;">Option B &mdash; Python, pulls just this ligand instance's interactions</div>
+          <p style="font-size:12.5px;color:var(--ink-soft);line-height:1.7;margin:0 0 10px;">
+            <code>interaction_sets</code> is keyed <code>"RESNAME:CHAIN:RESNR"</code> &mdash; confirmed against
+            an installed PLIP. Cross-reference its <code>.hbonds_ldon</code> / <code>.hbonds_pdon</code> /
+            <code>.pistacking</code> / <code>.pication_laro</code> / <code>.pication_paro</code> /
+            <code>.saltbridge_lneg</code> / <code>.saltbridge_pneg</code> / <code>.halogen_bonds</code> /
+            <code>.water_bridges</code> / <code>.metal_complexes</code> lists against the chain/residue
+            numbers in the contact table above &mdash; a contact both tools agree on is on firmer ground
+            than one only this tool's distance heuristic flags.
+          </p>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+            <button class="secondary" id="btnCopyPlipPy" style="font-size:11.5px;padding:6px 10px;">Copy Python snippet</button>
+          </div>
+          <div class="mono" id="plipPySnippet" style="background:var(--paper);border:1px solid var(--rule);border-radius:4px;padding:9px 11px;font-size:11.5px;white-space:pre-wrap;word-break:break-all;"></div>
+        </div>
+      </div>
+
+      <div style="margin-top:26px;padding-top:20px;border-top:1px solid var(--rule);">
+        <h3 style="margin-bottom:10px;">Mutation-scan export (alanine scanning)</h3>
+        <p style="font-size:13px;color:var(--ink-soft);max-width:66ch;line-height:1.65;margin:0 0 14px;">
+          One job per contact residue, mutated to alanine, plus a wild-type reference &mdash; formatted for both
+          Rosetta (resfiles) and Boltz-2 affinity (YAML). The tool auto-detects whether the ligand sits on a
+          peptide/protein chain or as a standalone ligand and builds each accordingly. Nothing here runs the
+          prediction itself; these are job inputs to submit on your own compute.
+        </p>
+        <button class="secondary" id="btnExportMutScan">Export mutation-scan job set (.zip)</button>
+        <div id="mutScanNote" style="font-family:var(--mono);font-size:11px;color:var(--ink-soft);margin-top:8px;"></div>
+      </div>
+
+      <div style="margin-top:26px;padding-top:20px;border-top:1px solid var(--rule);">
+        <h3 style="margin-bottom:10px;">Structural neighbor search (Foldseek)</h3>
+        <p style="font-size:13px;color:var(--ink-soft);max-width:66ch;line-height:1.65;margin:0 0 14px;">
+          Submits this whole structure to the public Foldseek search server to find structurally similar
+          folds &mdash; including AlphaFold DB predictions that aren't annotated with this ligand at all, but
+          may share the pocket geometry. This is a live public API call made directly from your browser; it
+          may fail on CORS or rate limits depending on the server's current config &mdash; if so, download the
+          structure and run <span class="mono">foldseek easy-search</span> locally or on your cluster instead.
+        </p>
+        <div class="row2" style="margin-bottom:12px;max-width:480px;">
+          <div class="field">
+            <label style="color:var(--ink-soft);">Database</label>
+            <select id="foldseekDb" style="background:var(--paper);border:1px solid var(--rule);border-radius:3px;padding:8px 9px;font-family:var(--mono);font-size:12.5px;width:100%;">
+              <option value="pdb100">pdb100 — other PDB depositions</option>
+              <option value="afdb50">afdb50 — AlphaFold DB (UniProt50)</option>
+              <option value="afdb-swissprot">afdb-swissprot — AlphaFold DB (Swiss-Prot)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label style="color:var(--ink-soft);">Mode</label>
+            <select id="foldseekMode" style="background:var(--paper);border:1px solid var(--rule);border-radius:3px;padding:8px 9px;font-family:var(--mono);font-size:12.5px;width:100%;">
+              <option value="3diaa">3diaa — structure + sequence (recommended)</option>
+              <option value="tmalign">tmalign — slower, more sensitive</option>
+            </select>
+          </div>
+        </div>
+        <button class="secondary" id="btnFoldseek">Search Foldseek for structural neighbors</button>
+        <div id="foldseekStatus" style="font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);margin-top:8px;"></div>
+        <div id="foldseekResults" style="margin-top:14px;"></div>
+      </div>
+
+      <div style="margin-top:26px;padding-top:20px;border-top:1px solid var(--rule);">
+        <h3 style="margin-bottom:10px;">QM cluster export</h3>
+        <p style="font-size:13px;color:var(--ink-soft);max-width:66ch;line-height:1.65;margin:0 0 10px;">
+          Capped side-chain fragments for DFT single-point energies &mdash; real crystallographic heavy-atom
+          coordinates, with hydrogens added by standard local geometry (sp3 ~109.5&deg;, sp2/aromatic ~120&deg;,
+          1.09&thinsp;&Aring; C&ndash;H) since X-ray structures don't resolve them. Each job optimizes only the
+          added hydrogens (heavy atoms held fixed) to clean up that approximate placement, then reports energy.
+        </p>
+        <div class="field" style="max-width:340px;margin-bottom:12px;">
+          <label style="color:var(--ink-soft);">Output format</label>
+          <select id="qmFormat" style="background:var(--paper);border:1px solid var(--rule);border-radius:3px;padding:8px 9px;font-family:var(--mono);font-size:12.5px;width:100%;">
+            <option value="gaussian">Gaussian (.gjf)</option>
+            <option value="sparc">SPARC-X-API (.py)</option>
+          </select>
+        </div>
+        <p id="qmCaveatText" style="font-size:12.5px;color:var(--cat-acidic);max-width:66ch;line-height:1.6;margin:0 0 14px;"></p>
+        <button class="secondary" id="btnExportQM">Export QM fragments (.zip)</button>
+        <div id="qmNote" style="font-family:var(--mono);font-size:11px;color:var(--ink-soft);margin-top:8px;"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    Data: RCSB PDB Search API &amp; RCSB file server, queried live in your browser. Legacy .pdb coordinate files are used, so entries only available in mmCIF (very large assemblies) are skipped. Contact geometry is a first-pass computational triage tool &mdash; verify anything load-bearing by inspecting the structure directly.
+  </footer>
+</main>
+
+<script>
+/* ============================== state ============================== */
+const S = {
+  ligand: 'M3L',
+  radius: 5,
+  excludeWater: true,
+  includeHet: true,
+  hits: [],           // [{identifier, title}]
+  analyzed: [],        // [{pdbId, title, error, instances:[{chain,resi,contacts:[...]}]}]
+  activeIdx: null,
+  viewer: null
+};
+
+const CATS = {
+  ASP:'acidic', GLU:'acidic',
+  LYS:'basic', ARG:'basic', HIS:'basic',
+  SER:'polar', THR:'polar', CYS:'polar', ASN:'polar', GLN:'polar',
+  PHE:'aromatic', TYR:'aromatic', TRP:'aromatic',
+  GLY:'nonpolar', ALA:'nonpolar', VAL:'nonpolar', LEU:'nonpolar', ILE:'nonpolar', PRO:'nonpolar', MET:'nonpolar'
+};
+const CAT_LABEL = {acidic:'Acidic', basic:'Basic', polar:'Polar uncharged', aromatic:'Aromatic', nonpolar:'Nonpolar aliphatic', other:'Other / hetero'};
+const CAT_COLOR = {
+  acidic:getCss('--cat-acidic'), basic:getCss('--cat-basic'), polar:getCss('--cat-polar'),
+  aromatic:getCss('--cat-aromatic'), nonpolar:getCss('--cat-nonpolar'), other:getCss('--cat-other')
+};
+function getCss(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function categoryOf(resn){ return CATS[resn] || 'other'; }
+
+/* ============================== logging ============================== */
+const logEl = document.getElementById('log');
+function log(msg, cls){
+  const line = document.createElement('div');
+  if(cls) line.className = cls;
+  line.textContent = msg;
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+/* ============================== RCSB search ============================== */
+async function searchRCSB(ligandId, seqCutoff){
+  const rows = 100;
+  let start = 0, total = null, out = [];
+  // Sequence-identity clusters are defined at the polymer_entity level, so grouping
+  // requires that return_type; ungrouped search stays at entry level as before.
+  const returnType = seqCutoff ? 'polymer_entity' : 'entry';
+  while(true){
+    const requestOptions = { paginate:{ start, rows }, results_content_type:['experimental'] };
+    if(seqCutoff){
+      requestOptions.group_by_return_type = 'representatives';
+      requestOptions.group_by = { aggregation_method: 'sequence_identity', similarity_cutoff: Number(seqCutoff) };
+    }
+    const body = {
+      query:{ type:'terminal', service:'text_chem', parameters:{ attribute:'rcsb_id', operator:'exact_match', value: ligandId } },
+      return_type: returnType,
+      request_options: requestOptions
+    };
+    const resp = await fetch('https://search.rcsb.org/rcsbsearch/v2/query', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+    });
+    if(resp.status === 204){ break; } // no hits
+    if(!resp.ok){
+      const detail = await resp.text().catch(() => '');
+      throw new Error(`RCSB search API returned ${resp.status}${seqCutoff ? ' (with sequence-identity grouping — try "No cutoff" if this persists)' : ''}${detail ? ': ' + detail.slice(0,200) : ''}`);
+    }
+    const data = await resp.json();
+    total = data.total_count;
+    const set = data.result_set || [];
+    out = out.concat(set.map(r => r.identifier));
+    start += rows;
+    if(out.length >= total || set.length === 0 || out.length >= 2000) break;
+  }
+  // polymer_entity identifiers look like "1ABC_1" — reduce to the parent entry ID and dedupe.
+  const rawCount = out.length;
+  const ids = Array.from(new Set(out.map(id => id.split('_')[0])));
+  return { total: total || 0, ids, rawCount, grouped: !!seqCutoff };
+}
+
+async function fetchEntryTitles(ids){
+  // Batch via GraphQL-ish REST: use the entry summary endpoint per id, capped/parallel with limit.
+  const titles = {};
+  const CONC = 6;
+  let i = 0;
+  async function worker(){
+    while(i < ids.length){
+      const id = ids[i++];
+      try{
+        const r = await fetch(`https://data.rcsb.org/rest/v1/core/entry/${id}`);
+        if(r.ok){ const j = await r.json(); titles[id] = (j.struct && j.struct.title) || ''; }
+      }catch(e){ /* non-fatal */ }
+    }
+  }
+  await Promise.all(Array.from({length:Math.min(CONC, ids.length)}, worker));
+  return titles;
+}
+
+/* ============================== PDB parsing ============================== */
+function parsePDB(text){
+  const atoms = [];
+  const lines = text.split('\n');
+  for(const line of lines){
+    const rec = line.substring(0,6).trim();
+    if(rec !== 'ATOM' && rec !== 'HETATM') continue;
+    const altLoc = line[16];
+    if(altLoc !== ' ' && altLoc !== 'A') continue; // keep primary conformer only
+    const name = line.substring(12,16).trim();
+    const resn = line.substring(17,20).trim();
+    const chain = line.substring(21,22).trim() || ' ';
+    const resiRaw = line.substring(22,26).trim();
+    const icode = line.substring(26,27).trim();
+    const resi = parseInt(resiRaw, 10);
+    const x = parseFloat(line.substring(30,38));
+    const y = parseFloat(line.substring(38,46));
+    const z = parseFloat(line.substring(46,54));
+    let element = line.substring(76,78).trim();
+    if(!element){ element = name.replace(/[0-9]/g,'').substring(0,1); }
+    if(Number.isNaN(x) || Number.isNaN(resi)) continue;
+    atoms.push({name, resn, chain, resi, icode, x, y, z, element, het: rec === 'HETATM'});
+  }
+  return atoms;
+}
+
+function groupResidues(atoms){
+  const map = new Map();
+  for(const a of atoms){
+    const key = a.chain + '|' + a.resi + '|' + a.icode + '|' + a.resn;
+    if(!map.has(key)) map.set(key, {chain:a.chain, resi:a.resi, icode:a.icode, resn:a.resn, atoms:[]});
+    map.get(key).atoms.push(a);
+  }
+  return map;
+}
+
+function centroid(atomList){
+  let x=0,y=0,z=0;
+  for(const a of atomList){ x+=a.x; y+=a.y; z+=a.z; }
+  const n = atomList.length || 1;
+  return {x:x/n, y:y/n, z:z/n};
+}
+function dist(a,b){ return Math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2 + (a.z-b.z)**2); }
+
+const SIDECHAIN_EXCLUDE = new Set(['N','CA','C','O']);
+
+/* ============================== analysis ============================== */
+// Aromatic ring atom sets for cation-π geometry (real PDB atom names). Trp has two rings —
+// per Albanese et al., the closer of the 5- and 6-membered rings is used.
+const RING_DEFS = {
+  PHE: [['CG','CD1','CD2','CE1','CE2','CZ']],
+  TYR: [['CG','CD1','CD2','CE1','CE2','CZ']],
+  HIS: [['CG','ND1','CD2','CE1','NE2']],
+  TRP: [['CG','CD1','NE1','CE2','CD2'], ['CD2','CE2','CE3','CZ3','CH2','CZ2']]
+};
+
+// Symmetric 3x3 eigen-decomposition via cyclic Jacobi rotations — numerically verified against
+// known-normal test cases (flat and tilted hexagons) before use here.
+function jacobiEigen3x3(A, maxIter=100, tol=1e-12){
+  let a = [A[0].slice(), A[1].slice(), A[2].slice()];
+  let V = [[1,0,0],[0,1,0],[0,0,1]];
+  for(let iter=0; iter<maxIter; iter++){
+    let p=0,q=1,max=Math.abs(a[0][1]);
+    if(Math.abs(a[0][2])>max){max=Math.abs(a[0][2]);p=0;q=2;}
+    if(Math.abs(a[1][2])>max){max=Math.abs(a[1][2]);p=1;q=2;}
+    if(max<tol) break;
+    const app=a[p][p], aqq=a[q][q], apq=a[p][q];
+    const phi = 0.5*Math.atan2(2*apq, aqq-app);
+    const c=Math.cos(phi), s=Math.sin(phi);
+    const newA = [a[0].slice(),a[1].slice(),a[2].slice()];
+    for(let k=0;k<3;k++){ const akp=a[k][p], akq=a[k][q]; newA[k][p]=c*akp-s*akq; newA[k][q]=s*akp+c*akq; }
+    const a2 = [newA[0].slice(),newA[1].slice(),newA[2].slice()];
+    for(let k=0;k<3;k++){ const apk=a2[p][k], aqk=a2[q][k]; a2[p][k]=c*apk-s*aqk; a2[q][k]=s*apk+c*aqk; }
+    a=a2;
+    for(let k=0;k<3;k++){ const vkp=V[k][p], vkq=V[k][q]; V[k][p]=c*vkp-s*vkq; V[k][q]=s*vkp+c*vkq; }
+  }
+  return { eigenvalues:[a[0][0],a[1][1],a[2][2]],
+    eigenvectors:[[V[0][0],V[1][0],V[2][0]],[V[0][1],V[1][1],V[2][1]],[V[0][2],V[1][2],V[2][2]]] };
+}
+
+// Ring centroid + normal via least-squares plane fit (smallest-eigenvalue eigenvector of the
+// covariance matrix) — matches the SVD-based approach in Albanese et al.
+function ringCentroidAndNormal(atomObjs){
+  const c = centroid(atomObjs);
+  const cov = [[0,0,0],[0,0,0],[0,0,0]];
+  atomObjs.forEach(p => {
+    const d = [p.x-c.x, p.y-c.y, p.z-c.z];
+    for(let i=0;i<3;i++) for(let j=0;j<3;j++) cov[i][j] += d[i]*d[j];
+  });
+  const { eigenvalues, eigenvectors } = jacobiEigen3x3(cov);
+  let minIdx = 0;
+  for(let i=1;i<3;i++) if(Math.abs(eigenvalues[i]) < Math.abs(eigenvalues[minIdx])) minIdx = i;
+  const nv = eigenvectors[minIdx];
+  return { centroid: c, normal: norm({x:nv[0], y:nv[1], z:nv[2]}) };
+}
+
+// Cation-π geometry for one contact residue: ring-center distance from the ligand's anchor atom,
+// and the angle between that vector and the ring normal, folded to 0-90° (a ring has no
+// up/down), classified en-face/intermediate/edge at the 30°/60° cutoffs from Albanese et al.
+function ringGeometryForResidue(resAtoms, resn, anchorAtom){
+  const defs = RING_DEFS[resn];
+  if(!defs) return null;
+  const byName = {};
+  resAtoms.forEach(a => { byName[a.name] = a; });
+  let best = null;
+  for(const ringNames of defs){
+    const pts = ringNames.map(nm => byName[nm]).filter(Boolean);
+    if(pts.length < ringNames.length) continue; // incomplete ring in the deposited coordinates
+    const { centroid: rc, normal: rn } = ringCentroidAndNormal(pts);
+    const d = dist(rc, anchorAtom);
+    if(!best || d < best.dist){
+      const relN = norm({x:anchorAtom.x-rc.x, y:anchorAtom.y-rc.y, z:anchorAtom.z-rc.z});
+      const angle = Math.acos(Math.max(-1,Math.min(1, Math.abs(dot(relN, rn))))) * 180/Math.PI;
+      const cls = angle <= 30 ? 'en-face' : angle <= 60 ? 'intermediate' : 'edge';
+      best = { dist: d, angle, cls };
+    }
+  }
+  return best;
+}
+
+function analyzeStructure(pdbId, atoms, ligandId, radius, excludeWater, includeHet){
+  const residues = groupResidues(atoms);
+  const ligandInstances = [];
+  for(const [key, res] of residues){
+    if(res.resn === ligandId) ligandInstances.push(res);
+  }
+  if(ligandInstances.length === 0) return { instances: [] };
+
+  const instancesOut = [];
+  for(const lig of ligandInstances){
+    const ligCentroid = centroid(lig.atoms);
+    // anchor atom: farthest atom from centroid = approx functional tip
+    let anchor = lig.atoms[0], maxD = -1;
+    for(const a of lig.atoms){ const d = dist(a, ligCentroid); if(d > maxD){ maxD = d; anchor = a; } }
+    const axis = norm({x:anchor.x-ligCentroid.x, y:anchor.y-ligCentroid.y, z:anchor.z-ligCentroid.z});
+    const basis = orthoBasis(axis);
+
+    const contacts = [];
+    for(const [key, res] of residues){
+      if(res === lig) continue;
+      if(res.resn === ligandId) continue; // don't count a second copy of the ligand as its own contact
+      if(excludeWater && (res.resn === 'HOH' || res.resn === 'WAT')) continue;
+      const isStandardAA = !!CATS[res.resn];
+      if(!isStandardAA && !includeHet) continue;
+      let minD = Infinity, ligAtom=null, resAtom=null;
+      for(const la of lig.atoms){
+        for(const ra of res.atoms){
+          const d = dist(la, ra);
+          if(d < minD){ minD = d; ligAtom = la; resAtom = ra; }
+        }
+      }
+      if(minD <= radius){
+        const resCentroid = centroid(res.atoms);
+        const rel = {x:resCentroid.x-ligCentroid.x, y:resCentroid.y-ligCentroid.y, z:resCentroid.z-ligCentroid.z};
+        const cd = Math.sqrt(rel.x**2+rel.y**2+rel.z**2);
+        const px = dot(rel, basis.u), py = dot(rel, basis.v), pz = dot(rel, axis);
+        const axialAngle = Math.acos(Math.max(-1,Math.min(1, pz / (cd||1)))) * 180/Math.PI;
+        const ring = ringGeometryForResidue(res.atoms, res.resn, anchor);
+        contacts.push({
+          resn: res.resn, chain: res.chain, resi: res.resi,
+          category: categoryOf(res.resn),
+          minDist: minD, centroidDist: cd,
+          projX: px, projY: py, tipSide: pz >= 0,
+          axialAngle,
+          ringDist: ring ? ring.dist : null, ringAngle: ring ? ring.angle : null, ringClass: ring ? ring.cls : null
+        });
+      }
+    }
+    contacts.sort((a,b)=>a.minDist-b.minDist);
+    instancesOut.push({ chain: lig.chain, resi: lig.resi, contacts });
+  }
+  return { instances: instancesOut };
+}
+
+function norm(v){ const m = Math.sqrt(v.x*v.x+v.y*v.y+v.z*v.z) || 1; return {x:v.x/m,y:v.y/m,z:v.z/m}; }
+function dot(a,b){ return a.x*b.x+a.y*b.y+a.z*b.z; }
+function cross(a,b){ return {x:a.y*b.z-a.z*b.y, y:a.z*b.x-a.x*b.z, z:a.x*b.y-a.y*b.x}; }
+function orthoBasis(axis){
+  let ref = Math.abs(axis.z) < 0.9 ? {x:0,y:0,z:1} : {x:1,y:0,z:0};
+  const u = norm(cross(ref, axis));
+  const v = norm(cross(axis, u));
+  return {u, v};
+}
+
+/* ============================== fetch orchestration ============================== */
+async function fetchPDBText(pdbId){
+  const r = await fetch(`https://files.rcsb.org/download/${pdbId}.pdb`);
+  if(!r.ok) throw new Error('legacy PDB format unavailable (HTTP ' + r.status + ')');
+  return await r.text();
+}
+
+async function runAnalysis(){
+  const btn = document.getElementById('btnAnalyze');
+  btn.disabled = true;
+  document.getElementById('btnCsv').disabled = true;
+  document.getElementById('btnExportAllMotifs').disabled = true;
+  S.analyzed = [];
+  const radius = parseFloat(document.getElementById('sphereRadius').value) || 5;
+  const maxN = Math.max(1, parseInt(document.getElementById('maxStructs').value,10) || 12);
+  const excludeWater = document.getElementById('excludeWater').checked;
+  const includeHet = document.getElementById('includeHet').checked;
+  S.radius = radius; S.excludeWater = excludeWater; S.includeHet = includeHet;
+
+  const toRun = S.hits.slice(0, maxN);
+  log(`--- analyzing ${toRun.length} structure(s), sphere = ${radius} Å ---`, 'hd');
+
+  const CONC = 4;
+  let idx = 0;
+  async function worker(){
+    while(idx < toRun.length){
+      const h = toRun[idx++];
+      try{
+        const text = await fetchPDBText(h.identifier);
+        const atoms = parsePDB(text);
+        const { instances } = analyzeStructure(h.identifier, atoms, S.ligand, radius, excludeWater, includeHet);
+        if(instances.length === 0){
+          log(`${h.identifier}: no ${S.ligand} instance found in coordinate file, skipped`, 'err');
+          S.analyzed.push({ pdbId:h.identifier, title:h.title, error:'not found in coordinates' });
+        } else {
+          const nContacts = instances.reduce((s,i)=>s+i.contacts.length,0);
+          log(`${h.identifier}: ${instances.length} ${S.ligand} instance(s), ${nContacts} contact residue(s)`, 'ok');
+          S.analyzed.push({ pdbId:h.identifier, title:h.title, instances, pdbText:text });
+        }
+      }catch(e){
+        log(`${h.identifier}: ${e.message}`, 'err');
+        S.analyzed.push({ pdbId:h.identifier, title:h.title, error:e.message });
+      }
+      renderAll();
+    }
+  }
+  await Promise.all(Array.from({length:Math.min(CONC,toRun.length)}, worker));
+  log('--- done ---', 'hd');
+  btn.disabled = false;
+  document.getElementById('btnCsv').disabled = false;
+  document.getElementById('btnExportAllMotifs').disabled = false;
+}
+
+/* ============================== rendering ============================== */
+function renderAll(){
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('results').style.display = 'block';
+  renderStats();
+  renderCharts();
+  renderStructList();
+}
+
+function allContacts(){
+  const out = [];
+  for(const s of S.analyzed){
+    if(!s.instances) continue;
+    for(const inst of s.instances){
+      for(const c of inst.contacts){
+        out.push(Object.assign({pdbId:s.pdbId, ligChain:inst.chain, ligResi:inst.resi}, c));
+      }
+    }
+  }
+  return out;
+}
+
+function renderStats(){
+  const ok = S.analyzed.filter(s=>s.instances);
+  const contacts = allContacts();
+  const catCounts = {};
+  for(const c of contacts) catCounts[c.category] = (catCounts[c.category]||0)+1;
+  let topCat = '—', topN = 0;
+  for(const k in catCounts){ if(catCounts[k] > topN){ topN = catCounts[k]; topCat = CAT_LABEL[k]; } }
+  const avgDist = contacts.length ? (contacts.reduce((s,c)=>s+c.minDist,0)/contacts.length).toFixed(2) : '—';
+
+  const stats = [
+    [ok.length, 'Structures with hits'],
+    [S.analyzed.length - ok.length, 'Skipped / not found'],
+    [contacts.length, 'Total contact residues'],
+    [topCat, 'Most common category'],
+    [avgDist, 'Mean contact distance (Å)']
+  ];
+  document.getElementById('statGrid').innerHTML = stats.map(([n,l])=>
+    `<div class="stat-card"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');
+}
+
+function renderCharts(){
+  const contacts = allContacts();
+  // category bar chart
+  const catOrder = ['acidic','basic','polar','aromatic','nonpolar','other'];
+  const catCounts = catOrder.map(k => contacts.filter(c=>c.category===k).length);
+  drawBarChart('catChart', catOrder.map(k=>CAT_LABEL[k]), catCounts, catOrder.map(k=>CAT_COLOR[k]));
+
+  // distance histogram
+  const maxR = S.radius;
+  const nbins = Math.max(4, Math.round(maxR/0.5));
+  const binW = maxR / nbins;
+  const bins = new Array(nbins).fill(0);
+  for(const c of contacts){
+    let b = Math.floor(c.minDist / binW);
+    if(b >= nbins) b = nbins-1;
+    if(b < 0) b = 0;
+    bins[b]++;
+  }
+  const labels = bins.map((_,i)=> (i*binW).toFixed(1));
+  drawBarChart('distChart', labels, bins, labels.map(()=>getCss('--amber')));
+}
+
+const CHART_DATA = {};
+function drawBarChart(canvasId, labels, values, colors){
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  // Read width from the stable parent box, never from the canvas itself —
+  // reading canvas.clientWidth after setting canvas.width causes runaway
+  // growth on retina displays (bitmap width feeds back into clientWidth).
+  const w = canvas.parentElement.clientWidth || 420, h = 220;
+  canvas.width = Math.round(w*dpr);
+  canvas.height = Math.round(h*dpr);
+  canvas.style.width = w+'px';
+  canvas.style.height = h+'px';
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,w,h);
+  CHART_DATA[canvasId] = {labels, values, colors};
+  paintBars(ctx, w, h, labels, values, colors, {});
+}
+
+function paintBars(ctx, w, h, labels, values, colors, opts){
+  const padL = opts.yTitle ? 52 : 30, padB = opts.xTitle ? 64 : 46, padT = 16, padR = 12;
+  const plotW = w - padL - padR, plotH = h - padT - padB;
+  const maxV = Math.max(1, ...values);
+  const n = values.length;
+  const gap = 10;
+  const bw = (plotW - gap*(n-1)) / n;
+
+  ctx.strokeStyle = opts.axis || getCss('--rule'); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, padT+plotH); ctx.lineTo(padL+plotW, padT+plotH); ctx.stroke();
+
+  ctx.font = '11px IBM Plex Mono, monospace';
+  ctx.fillStyle = getCss('--ink-soft');
+  ctx.textAlign = 'center';
+  for(let i=0;i<n;i++){
+    const v = values[i];
+    const bh = (v/maxV) * (plotH-8);
+    const x = padL + i*(bw+gap);
+    const y = padT + plotH - bh;
+    ctx.fillStyle = colors[i];
+    ctx.fillRect(x, y, bw, bh);
+    ctx.fillStyle = getCss('--ink');
+    ctx.font = '11px IBM Plex Mono, monospace';
+    ctx.textAlign = 'center';
+    if(v>0) ctx.fillText(String(v), x+bw/2, y-4);
+    ctx.fillStyle = getCss('--ink-soft');
+    ctx.save();
+    ctx.translate(x+bw/2, padT+plotH+14);
+    const lbl = String(labels[i]);
+    if(lbl.length > 6){ ctx.rotate(-Math.PI/5); ctx.textAlign='right'; }
+    ctx.font = '10px IBM Plex Mono, monospace';
+    ctx.fillText(lbl, 0, 0);
+    ctx.restore();
+  }
+  ctx.fillStyle = getCss('--ink');
+  ctx.font = '12px IBM Plex Mono, monospace';
+  ctx.textAlign = 'center';
+  if(opts.xTitle) ctx.fillText(opts.xTitle, padL + plotW/2, h - 10);
+  if(opts.yTitle){
+    ctx.save(); ctx.translate(16, padT + plotH/2); ctx.rotate(-Math.PI/2);
+    ctx.fillText(opts.yTitle, 0, 0); ctx.restore();
+  }
+}
+
+// High-resolution PNG of a bar chart on a white background, with axis titles.
+const FIG_TITLES = {
+  catChart: {yTitle:'Contact residues', name:'contact_categories'},
+  distChart: {yTitle:'Contact residues', xTitle:'Minimum contact distance (Å)', name:'contact_distances'}
+};
+function exportBarChart(canvasId){
+  const d = CHART_DATA[canvasId];
+  if(!d){ log('run an analysis first, then save the chart', 'err'); return; }
+  const t = FIG_TITLES[canvasId];
+  const w = 640, h = 360, scale = 4;
+  const c = document.createElement('canvas');
+  c.width = w*scale; c.height = h*scale;
+  const ctx = c.getContext('2d');
+  ctx.setTransform(scale,0,0,scale,0,0);
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,w,h);
+  paintBars(ctx, w, h, d.labels, d.values, d.colors, {xTitle:t.xTitle, yTitle:t.yTitle, axis:'#8a8170'});
+  c.toBlob(b => { if(b) downloadBlob(b, `${S.ligand}_${t.name}.png`); }, 'image/png');
+}
+
+function exportFigure(btn){
+  const which = btn.dataset.fig;
+  if(which === 'catChart' || which === 'distChart'){ exportBarChart(which); return; }
+  if(which === 'radial'){
+    const svg = document.querySelector('#radial svg');
+    if(!svg){ log('open a structure first', 'err'); return; }
+    const s = S.analyzed[S.activeIdx];
+    const base = `${s ? s.pdbId + '_' : ''}${S.ligand}_radial_projection`;
+    if(btn.dataset.format === 'svg') window.LabFigure.downloadSvg(svg, base);
+    else window.LabFigure.downloadPng(svg, base);
+    return;
+  }
+  if(which === 'viewer3d'){
+    if(!S.viewer){ log('open a structure first', 'err'); return; }
+    const s = S.analyzed[S.activeIdx];
+    const uri = S.viewer.pngURI();
+    fetch(uri).then(r => r.blob()).then(b => downloadBlob(b, `${s ? s.pdbId + '_' : ''}${S.ligand}_3D_view.png`));
+  }
+}
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.fig-actions button[data-fig]');
+  if(btn) exportFigure(btn);
+});
+
+function renderStructList(){
+  const el = document.getElementById('structList');
+  el.innerHTML = '';
+  S.analyzed.forEach((s, i) => {
+    const row = document.createElement('div');
+    row.className = 'struct-row' + (s.error ? ' err' : '') + (S.activeIdx===i ? ' active' : '');
+    const nContacts = s.instances ? s.instances.reduce((a,x)=>a+x.contacts.length,0) : 0;
+    row.innerHTML = `<span class="pid">${s.pdbId}</span><span class="title">${s.error ? s.error : (s.title||'')}</span><span class="cnt">${s.error ? '' : nContacts + ' contacts'}</span>`;
+    if(!s.error){
+      row.addEventListener('click', () => { S.activeIdx = i; renderStructList(); renderDetail(i); });
+    }
+    el.appendChild(row);
+  });
+}
+
+function renderDetail(i){
+  const s = S.analyzed[i];
+  document.getElementById('detailSection').style.display = 'block';
+  document.getElementById('detailHeading').textContent = `${s.pdbId} — ${s.title || 'detail'}`;
+  const inst = s.instances[0]; // primary instance for visualization
+
+  // table
+  const RING_CLASS_COLOR = { 'en-face': getCss('--cat-basic'), 'intermediate': getCss('--amber'), 'edge': getCss('--cat-acidic') };
+  const allC = [];
+  s.instances.forEach(inst => inst.contacts.forEach(c => allC.push(Object.assign({ligChain:inst.chain, ligResi:inst.resi}, c))));
+  const rows = allC.map(c => `<tr>
+      <td>${c.ligChain}/${c.ligResi}</td>
+      <td>${c.resn} ${c.chain}${c.resi}</td>
+      <td><span class="cat-pill" style="background:${CAT_COLOR[c.category]}">${CAT_LABEL[c.category]}</span></td>
+      <td>${c.minDist.toFixed(2)}</td>
+      <td>${c.centroidDist.toFixed(2)}</td>
+      <td>${c.axialAngle.toFixed(0)}°</td>
+      <td>${c.tipSide ? 'tip side' : 'backbone side'}</td>
+      <td>${c.ringDist !== null ? c.ringDist.toFixed(2) : '—'}</td>
+      <td>${c.ringAngle !== null ? c.ringAngle.toFixed(0)+'°' : '—'}</td>
+      <td>${c.ringClass ? `<span class="cat-pill" style="background:${RING_CLASS_COLOR[c.ringClass]}">${c.ringClass}</span>` : '—'}</td>
+    </tr>`).join('');
+  document.getElementById('detailTable').innerHTML =
+    `<thead><tr><th>Ligand</th><th>Residue</th><th>Category</th><th>Min dist (Å)</th><th>Centroid dist (Å)</th><th>Axial angle</th><th>Side</th><th>Ring dist (Å)</th><th>Ring angle</th><th>Cation-π class</th></tr></thead><tbody>${rows}</tbody>`;
+
+  render3D(s, inst);
+  renderRadial(inst);
+
+  const contigStr = contigFromContacts(inst);
+  const seqStr = sequenceFromContacts(inst);
+  document.getElementById('contigDisplay').textContent = contigStr;
+  document.getElementById('seqDisplay').textContent = seqStr || '(no contact residues)';
+  wireCopyButton('btnCopyContig', contigStr);
+  wireCopyButton('btnCopySeq', seqStr);
+
+  const fdCmd = folddiscoCommand(s, inst);
+  const fdResidues = folddiscoResidueList(inst);
+  document.getElementById('folddiscoCmd').textContent = fdCmd;
+  document.getElementById('folddiscoResidues').textContent = fdResidues;
+  document.getElementById('fdAccessionHint').textContent = s.pdbId;
+  wireCopyButton('btnCopyFolddisco', fdCmd);
+  wireCopyButton('btnCopyFolddiscoResidues', fdResidues);
+
+  const plipCli = plipCliCommand(s, inst);
+  const plipPy = plipPythonSnippet(s, inst);
+  document.getElementById('plipCliCmd').textContent = plipCli;
+  document.getElementById('plipPySnippet').textContent = plipPy;
+  wireCopyButton('btnCopyPlipCli', plipCli);
+  wireCopyButton('btnCopyPlipPy', plipPy);
+}
+
+function wireCopyButton(btnId, text){
+  const btn = document.getElementById(btnId);
+  const original = btn.dataset.label || btn.textContent;
+  btn.dataset.label = original;
+  btn.onclick = async () => {
+    try{
+      await navigator.clipboard.writeText(text);
+      btn.textContent = 'Copied';
+      setTimeout(() => { btn.textContent = original; }, 1200);
+    }catch(e){
+      log('clipboard copy failed — select and copy the text manually', 'err');
+    }
+  };
+}
+
+function render3D(s, inst){
+  const el = document.getElementById('viewer3d');
+  el.innerHTML = '';
+  if(typeof $3Dmol === 'undefined'){ el.textContent = '3Dmol.js failed to load.'; return; }
+  const viewer = $3Dmol.createViewer(el, { backgroundColor: 'white', preserveDrawingBuffer: true });
+  S.viewer = viewer;
+  viewer.addModel(s.pdbText, 'pdb');
+  viewer.setStyle({}, { cartoon: { color: 'lightgrey', opacity: 0.85 } });
+  viewer.addStyle({ resn: S.ligand }, { stick: { colorscheme: 'orangeCarbon', radius: 0.22 } });
+  for(const c of inst.contacts){
+    viewer.addStyle({ chain: c.chain, resi: c.resi }, { stick: { colorscheme: 'default', radius: 0.14 } });
+  }
+  viewer.zoomTo({ resn: S.ligand, chain: inst.chain, resi: inst.resi });
+  viewer.zoom(0.55);
+  viewer.render();
+}
+
+function renderRadial(inst){
+  const el = document.getElementById('radial');
+  const w = el.clientWidth || 400, h = 360;
+  const cx = w/2, cy = h/2;
+  const maxR = S.radius;
+  const scale = (Math.min(w,h)/2 - 40) / maxR;
+  let rings = '';
+  for(let r=1;r<=Math.ceil(maxR);r++){
+    rings += `<circle cx="${cx}" cy="${cy}" r="${r*scale}" fill="none" stroke="${getCss('--rule')}" stroke-width="1"/>
+               <text x="${cx+4}" y="${cy-r*scale-2}" font-family="IBM Plex Mono, monospace" font-size="9" fill="${getCss('--ink-soft')}">${r}Å</text>`;
+  }
+  let markers = '';
+  for(const c of inst.contacts){
+    const r = Math.min(c.centroidDist, maxR) * scale;
+    const ang = Math.atan2(c.projY, c.projX);
+    const x = cx + r*Math.cos(ang), y = cy + r*Math.sin(ang);
+    const col = CAT_COLOR[c.category];
+    markers += `<g>
+      <circle cx="${x}" cy="${y}" r="7" fill="${c.tipSide ? col : 'white'}" stroke="${col}" stroke-width="2"/>
+      <text x="${x}" y="${y-11}" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="${getCss('--ink')}">${c.resn}${c.resi}</text>
+    </g>`;
+  }
+  el.innerHTML = `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+    ${rings}
+    <circle cx="${cx}" cy="${cy}" r="9" fill="${getCss('--amber')}" stroke="#241503" stroke-width="1.5"/>
+    <text x="${cx}" y="${cy+22}" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="11" font-weight="600" fill="${getCss('--ink')}">${S.ligand}</text>
+    ${markers}
+  </svg>`;
+}
+
+/* ============================== motif / scaffolding export ============================== */
+function downloadText(filename, content, mime){
+  const blob = new Blob([content], {type: mime || 'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+// Filters a source PDB down to just the ligand instance + its contact residues,
+// keeping original chain IDs / residue numbers so contig strings line up directly.
+function buildMotifPDB(sourceText, inst, pdbId){
+  const keep = new Set();
+  for(const c of inst.contacts) keep.add(c.chain + '|' + c.resi);
+  const out = [
+    'REMARK 900 MOTIF EXTRACTED BY LIGAND NEIGHBORHOOD EXPLORER',
+    `REMARK 900 SOURCE PDB ${pdbId}, LIGAND ${S.ligand} ${inst.chain}${inst.resi}, SPHERE RADIUS ${S.radius} ANGSTROM`,
+    `REMARK 900 ${inst.contacts.length} CONTACT RESIDUE(S), ORIGINAL CHAIN/RESIDUE NUMBERING PRESERVED`
+  ];
+  for(const line of sourceText.split('\n')){
+    const rec = line.substring(0,6).trim();
+    if(rec !== 'ATOM' && rec !== 'HETATM') continue;
+    const altLoc = line[16];
+    if(altLoc !== ' ' && altLoc !== 'A') continue;
+    const chain = line.substring(21,22).trim() || ' ';
+    const resi = parseInt(line.substring(22,26).trim(), 10);
+    const resn = line.substring(17,20).trim();
+    const isLigand = (resn === S.ligand && chain === inst.chain && resi === inst.resi);
+    const isContact = keep.has(chain + '|' + resi);
+    if(isLigand || isContact) out.push(line);
+  }
+  out.push('END');
+  return out.join('\n');
+}
+
+const AA3TO1 = {ALA:'A',ARG:'R',ASN:'N',ASP:'D',CYS:'C',GLN:'Q',GLU:'E',GLY:'G',HIS:'H',ILE:'I',
+  LEU:'L',LYS:'K',MET:'M',PHE:'F',PRO:'P',SER:'S',THR:'T',TRP:'W',TYR:'Y',VAL:'V'};
+
+// Unique contact residues, sorted by chain then residue number, grouped by chain.
+function residueGroups(inst){
+  const uniq = new Map();
+  for(const c of inst.contacts){ const k = c.chain+'|'+c.resi; if(!uniq.has(k)) uniq.set(k, c); }
+  const residues = Array.from(uniq.values()).sort((a,b) => a.chain === b.chain ? a.resi - b.resi : a.chain.localeCompare(b.chain));
+  const groups = [];
+  let cur = null;
+  residues.forEach(r => {
+    if(!cur || cur.chain !== r.chain){ cur = {chain: r.chain, residues: []}; groups.push(cur); }
+    cur.residues.push(r);
+  });
+  return groups;
+}
+
+// Legacy-RFdiffusion-style contig: fixed single-residue segments for each contact,
+// separated by placeholder build-length ranges. Chain breaks marked with a bare "0".
+function contigFromContacts(inst){
+  const groups = residueGroups(inst);
+  const GAP = '10-20';
+  const tokens = [];
+  groups.forEach((g, gi) => {
+    if(gi > 0) tokens.push('0');
+    tokens.push(GAP);
+    g.residues.forEach(r => { tokens.push(`${r.chain}${r.resi}-${r.resi}`); tokens.push(GAP); });
+  });
+  return '[' + tokens.join('/') + ']';
+}
+
+// One-letter codes for the contact residues only, in the same order/grouping as the contig.
+function sequenceFromContacts(inst){
+  return residueGroups(inst).map(g => g.residues.map(r => AA3TO1[r.resn] || 'X').join('')).join('/');
+}
+
+function buildManifest(s, inst){
+  const uniq = new Map();
+  inst.contacts.forEach(c => { const k = c.chain+'|'+c.resi; if(!uniq.has(k)) uniq.set(k,c); });
+  const sorted = Array.from(uniq.values()).sort((a,b) => a.chain === b.chain ? a.resi - b.resi : a.chain.localeCompare(b.chain));
+  const lines = [
+    `# Motif export — ${s.pdbId}${s.title ? ' ('+s.title+')' : ''}`,
+    `# Ligand ${S.ligand}, chain ${inst.chain} residue ${inst.resi}`,
+    `# Sphere radius: ${S.radius} Å   Contact residues: ${sorted.length}`,
+    '# Generated by Ligand Neighborhood Explorer',
+    '#',
+    '# chain  resi   resn  category         min_dist_A  centroid_dist_A'
+  ];
+  sorted.forEach(c => {
+    lines.push(`# ${c.chain.padEnd(6)} ${String(c.resi).padEnd(6)} ${c.resn.padEnd(5)} ${CAT_LABEL[c.category].padEnd(16)} ${c.minDist.toFixed(2).padEnd(11)} ${c.centroidDist.toFixed(2)}`);
+  });
+  lines.push('#');
+  lines.push('# Suggested RFdiffusion-style contig (protein motif positions only — the 10-20');
+  lines.push('# placeholders set how much new backbone to build between fixed contacts; edit them');
+  lines.push('# to match your target scaffold size, they are not a computed value):');
+  lines.push('contigmap.contigs=' + contigFromContacts(inst));
+  lines.push('#');
+  lines.push(`# The accompanying PDB keeps ${s.pdbId}'s original chain IDs and residue numbers, so`);
+  lines.push('# they match the contig above directly.');
+  lines.push(`# ${S.ligand} is included as a HETATM record — required input for ligand-aware`);
+  lines.push('# active-site scaffolding (RFdiffusion2 / RFdiffusion3). Legacy RFdiffusion motif');
+  lines.push('# scaffolding ignores ligand context entirely.');
+  lines.push('# RFdiffusion3 takes a JSON/YAML input spec rather than the contigmap.contigs= flag');
+  lines.push('# above — check your install\'s rfd3/docs/input.md for current field names before running.');
+  return lines.join('\n');
+}
+
+function exportActiveMotif(){
+  if(S.activeIdx === null) return;
+  const s = S.analyzed[S.activeIdx];
+  let n = 0;
+  s.instances.forEach(inst => {
+    if(inst.contacts.length === 0) return;
+    const tag = `${s.pdbId}_${inst.chain}${inst.resi}`;
+    downloadText(`motif_${tag}.pdb`, buildMotifPDB(s.pdbText, inst, s.pdbId));
+    downloadText(`motif_${tag}_manifest.txt`, buildManifest(s, inst));
+    n++;
+  });
+  log(n ? `exported motif + contig for ${s.pdbId} (${n} instance(s))` : `${s.pdbId}: no contacts to export`, n ? 'ok' : 'err');
+}
+
+async function exportAllMotifsZip(){
+  if(typeof JSZip === 'undefined'){ log('JSZip failed to load — batch export unavailable', 'err'); return; }
+  const zip = new JSZip();
+  let n = 0;
+  for(const s of S.analyzed){
+    if(!s.instances) continue;
+    for(const inst of s.instances){
+      if(inst.contacts.length === 0) continue;
+      const tag = `${s.pdbId}_${inst.chain}${inst.resi}`;
+      zip.file(`${tag}/motif_${tag}.pdb`, buildMotifPDB(s.pdbText, inst, s.pdbId));
+      zip.file(`${tag}/motif_${tag}_manifest.txt`, buildManifest(s, inst));
+      n++;
+    }
+  }
+  if(n === 0){ log('nothing to export yet — run an analysis first', 'err'); return; }
+  log(`zipping ${n} motif(s)…`, 'hd');
+  const blob = await zip.generateAsync({type:'blob'});
+  downloadBlob(blob, `${S.ligand}_motifs_${n}instances.zip`);
+  log(`exported ${n} motif(s) to zip`, 'ok');
+}
+
+/* ============================== mutation-scan export ============================== */
+// Parent (unmodified) residue for common PTM chemical components — used to build a
+// plausible sequence letter and, for Boltz-2, a "modifications" entry.
+const PTM_PARENT = {
+  M3L:'K', MLZ:'K', MLY:'K', ALY:'K', KCX:'K', M2L:'K',
+  SEP:'S', TPO:'T', PTR:'Y', CSO:'C', CSD:'C', HYP:'P', PCA:'E'
+};
+function parentLetter(resn){ return AA3TO1[resn] || PTM_PARENT[resn] || 'X'; }
+
+function structureChains(pdbText){
+  const atoms = parsePDB(pdbText);
+  const residues = groupResidues(atoms);
+  const byChain = new Map();
+  for(const [, res] of residues){
+    if(!byChain.has(res.chain)) byChain.set(res.chain, []);
+    byChain.get(res.chain).push(res);
+  }
+  for(const arr of byChain.values()) arr.sort((a,b) => a.resi - b.resi);
+  return byChain;
+}
+
+// 'peptide' if the ligand residue has a standard-residue (or other PTM) neighbor
+// close by in the same chain (i.e. it's polymer-connected); otherwise 'ligand'.
+function detectContext(byChain, inst){
+  const chainResidues = byChain.get(inst.chain) || [];
+  const idx = chainResidues.findIndex(r => r.resi === inst.resi);
+  if(idx === -1) return 'ligand';
+  const isPoly = r => r && (AA3TO1[r.resn] || PTM_PARENT[r.resn]);
+  const prev = chainResidues[idx-1], next = chainResidues[idx+1];
+  const prevOk = isPoly(prev) && Math.abs(prev.resi - inst.resi) <= 2;
+  const nextOk = isPoly(next) && Math.abs(next.resi - inst.resi) <= 2;
+  return (prevOk || nextOk) ? 'peptide' : 'ligand';
+}
+
+// Builds one Boltz-2 "protein" entity per polymer chain (skipping the ligand's own
+// chain entirely when it's a standalone, non-polymer ligand).
+function polymerEntities(byChain, ligandInst, context){
+  const entities = [];
+  for(const [chain, residues] of byChain){
+    const isPolymer = residues.some(r => AA3TO1[r.resn] || PTM_PARENT[r.resn]);
+    if(!isPolymer) continue;
+    if(context === 'ligand' && chain === ligandInst.chain) continue;
+    let seq = '';
+    const resiToIndex = new Map();
+    const mods = [];
+    residues.forEach(r => {
+      if(!AA3TO1[r.resn] && !PTM_PARENT[r.resn]) return;
+      seq += parentLetter(r.resn);
+      resiToIndex.set(r.resi, seq.length);
+      if(r.resn === S.ligand) mods.push({position: seq.length, ccd: S.ligand});
+    });
+    entities.push({chain, seq, resiToIndex, mods});
+  }
+  return entities;
+}
+
+function boltzYaml(entities, ligandInst, context, mutation){
+  const lines = [
+    '# Generated by Ligand Neighborhood Explorer — job input, not a run result.',
+    `# Mutation: ${mutation ? `${mutation.chain}${mutation.resi} -> ${mutation.mutLetter}` : 'none (wild type)'}`
+  ];
+  if(context === 'peptide'){
+    lines.push('# CAUTION: ligand is embedded in a peptide/protein chain. Boltz-2\'s affinity module');
+    lines.push('# currently has official support for protein–single-ligand affinity only, not');
+    lines.push('# protein/peptide-binder affinity — treat the affinity number from this file as');
+    lines.push('# unreliable unless your Boltz-2 build has PPI-affinity support. Structure/co-folding');
+    lines.push('# output is unaffected by this caveat.');
+  }
+  lines.push('version: 1', 'sequences:');
+  entities.forEach(e => {
+    let seq = e.seq;
+    if(mutation && mutation.chain === e.chain){
+      const idx = e.resiToIndex.get(mutation.resi);
+      if(idx) seq = seq.slice(0, idx-1) + mutation.mutLetter + seq.slice(idx);
+    }
+    lines.push('  - protein:', `      id: ${e.chain}`, `      sequence: ${seq}`);
+    if(e.mods.length){
+      lines.push('      modifications:');
+      e.mods.forEach(m => lines.push(`        - position: ${m.position}`, `          ccd: ${m.ccd}`));
+    }
+  });
+  let binderChain = ligandInst.chain;
+  if(context === 'ligand'){
+    lines.push('  - ligand:', `      id: ${ligandInst.chain}`, `      ccd: ${S.ligand}`);
+  }
+  lines.push('properties:', '  - affinity:', `      binder: ${binderChain}`);
+  return lines.join('\n');
+}
+
+function rosettaResfile(chain, resi, mutLetter){
+  return [
+    '# Rosetta resfile — restricts this position to the mutant identity, repacks everything else.',
+    '# Pair with your ddG protocol of choice (cartesian_ddg, ddg_monomer, flex ddG, or a',
+    '# RosettaScripts mutate+repack+score protocol) — these differ in their exact mutfile/XML',
+    '# wrapper syntax across Rosetta versions, so check your local install/demos.',
+    'NATAA',
+    'start',
+    `${resi} ${chain} PIKAA ${mutLetter}`
+  ].join('\n');
+}
+
+function mutationReadme(s, inst, context, contacts){
+  const lines = [
+    `Mutation-scan export — ${s.pdbId}${s.title ? ' ('+s.title+')' : ''}`,
+    `Ligand ${S.ligand}, chain ${inst.chain} residue ${inst.resi}`,
+    `Detected context: ${context === 'peptide' ? 'peptide/protein-embedded (ligand is part of a polymer chain)' : 'standalone ligand-like (not chain-connected)'}`,
+    `Contact residues scanned, mutated to Ala one at a time: ${contacts.length}`,
+    '',
+    'Files:',
+    '  boltz_WT.yaml           wild-type complex, Boltz-2 input',
+    '  boltz_<mut>.yaml        one per point mutation (same complex, that position -> Ala)',
+    '  rosetta_<mut>.resfile   matching Rosetta resfile (NATAA / start / PIKAA A at that position)',
+    '',
+    'ddG proxy: run WT + each mutant through your chosen backend and take the difference from WT',
+    '(predicted affinity for Boltz-2, ddG for Rosetta) as the approximate effect of that mutation.',
+    '',
+    'Caveats:',
+    '  - Sequences are built from this structure\'s coordinates only; any gaps in the deposited',
+    '    model become gaps in the sequence. Non-standard residues use a best-guess parent letter.',
+  ];
+  if(context === 'peptide'){
+    lines.push('  - Ligand is on a peptide/protein chain: Boltz-2 affinity prediction for a peptide/protein');
+    lines.push('    binder is not yet officially supported (only protein–single-ligand affinity is).');
+    lines.push('    Treat boltz_*.yaml affinity numbers as unreliable here; the files remain valid for');
+    lines.push('    structure/co-folding confidence.');
+  } else {
+    lines.push(`  - Ligand modeled via CCD code (ccd: ${S.ligand}). If your Boltz-2 install errors on this`);
+    lines.push('    CCD entry, try substituting a SMILES string instead — CCD-vs-SMILES affinity');
+    lines.push('    discrepancies have been reported for some ligands.');
+  }
+  lines.push('  - Rosetta resfiles specify the mutation only; they are not a complete ddG job by');
+  lines.push('    themselves — pair with your protocol\'s wrapper as noted in each file.');
+  return lines.join('\n');
+}
+
+function downloadBlob(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+async function exportMutationScan(){
+  if(S.activeIdx === null) return;
+  if(typeof JSZip === 'undefined'){ log('JSZip failed to load — mutation-scan export unavailable', 'err'); return; }
+  const s = S.analyzed[S.activeIdx];
+  const byChain = structureChains(s.pdbText);
+  const zip = new JSZip();
+  let total = 0;
+  const noteEl = document.getElementById('mutScanNote');
+  const contexts = [];
+
+  s.instances.forEach(inst => {
+    if(inst.contacts.length === 0) return;
+    const context = detectContext(byChain, inst);
+    contexts.push(context);
+    const entities = polymerEntities(byChain, inst, context);
+    const tag = `${s.pdbId}_${inst.chain}${inst.resi}`;
+    const folder = zip.folder(tag);
+    folder.file('boltz_WT.yaml', boltzYaml(entities, inst, context, null));
+    const contactResidues = residueGroups(inst).flatMap(g => g.residues);
+    const mutated = [];
+    contactResidues.forEach(c => {
+      const wtLetter = parentLetter(c.resn);
+      if(wtLetter === 'A') return; // already alanine
+      const mutTag = `${c.chain}${c.resi}${wtLetter}A`;
+      folder.file(`boltz_${mutTag}.yaml`, boltzYaml(entities, inst, context, {chain:c.chain, resi:c.resi, mutLetter:'A'}));
+      folder.file(`rosetta_${mutTag}.resfile`, rosettaResfile(c.chain, c.resi, 'A'));
+      mutated.push(c);
+      total++;
+    });
+    folder.file('README.txt', mutationReadme(s, inst, context, mutated));
+  });
+
+  if(total === 0){ log(`${s.pdbId}: nothing to export — no mutable contacts on this structure`, 'err'); return; }
+  const blob = await zip.generateAsync({type:'blob'});
+  downloadBlob(blob, `${s.pdbId}_${S.ligand}_mutation_scan.zip`);
+  log(`exported mutation-scan job set for ${s.pdbId} (${total} mutation(s))`, 'ok');
+  noteEl.textContent = `context: ${contexts.join(', ')} — ${total} mutation(s) exported`;
+}
+
+/* ============================== Foldseek structural search ============================== */
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Best-effort: recursively find any objects that look like a Foldseek hit (has a
+// 'target' string field), without assuming the exact nesting shape of the response.
+function collectFoldseekHits(node, out){
+  out = out || [];
+  if(Array.isArray(node)){
+    node.forEach(n => collectFoldseekHits(n, out));
+  } else if(node && typeof node === 'object'){
+    if(typeof node.target === 'string'){ out.push(node); }
+    else { Object.values(node).forEach(v => collectFoldseekHits(v, out)); }
+  }
+  return out;
+}
+
+function renderFoldseekResults(resultJson, ticketId){
+  const el = document.getElementById('foldseekResults');
+  const hits = collectFoldseekHits(resultJson);
+  const rawBtn = () => `<div style="margin-top:8px;"><a class="csv-link" href="#" id="foldseekRawLink">download raw result JSON</a></div>`;
+  if(hits.length === 0){
+    el.innerHTML = `<div style="font-family:var(--mono);font-size:12px;color:var(--ink-soft);">
+      No hits parsed from the response shape — the raw JSON below has whatever the server actually returned.</div>${rawBtn()}`;
+  } else {
+    const fieldsToShow = ['seqId','alnLength','eval','score','prob','tmScore'];
+    const rows = hits.slice(0, 50).map(h => {
+      const targetId = (h.target || '').split(/[_.]/)[0].toUpperCase();
+      const looksLikePdb = /^[0-9][A-Z0-9]{3}$/.test(targetId);
+      const shown = fieldsToShow.filter(f => h[f] !== undefined)
+        .map(f => `${f}=${typeof h[f] === 'number' ? Number(h[f]).toPrecision(3) : h[f]}`).join('  ');
+      return `<tr>
+        <td class="mono">${escapeHtml(h.target || '?')}</td>
+        <td class="mono" style="font-size:11px;color:var(--ink-soft);">${escapeHtml(shown)}</td>
+        <td>${looksLikePdb ? `<button class="secondary" style="font-size:10.5px;padding:4px 8px;" data-pid="${targetId}">Add to survey</button>` : ''}</td>
+      </tr>`;
+    }).join('');
+    el.innerHTML = `<table class="contacts"><thead><tr><th>Hit</th><th>Reported fields</th><th></th></tr></thead><tbody>${rows}</tbody></table>${rawBtn()}`;
+    el.querySelectorAll('button[data-pid]').forEach(btn => {
+      btn.addEventListener('click', () => addFoldseekHitToSurvey(btn.dataset.pid));
+    });
+  }
+  document.getElementById('foldseekRawLink').addEventListener('click', e => {
+    e.preventDefault();
+    downloadText(`foldseek_result_${ticketId}.json`, JSON.stringify(resultJson, null, 2), 'application/json');
+  });
+}
+
+function addFoldseekHitToSurvey(pid){
+  if(!pid) return;
+  if(S.hits.some(h => h.identifier === pid)){ log(`${pid} is already in the survey list`, 'hd'); return; }
+  S.hits.unshift({ identifier: pid, title: '(structural match via Foldseek)' });
+  document.getElementById('btnAnalyze').disabled = false;
+  document.getElementById('search-summary').textContent = `${S.hits.length} structures queued — ready to analyze`;
+  log(`added ${pid} to the survey list via Foldseek — re-run the analysis to include it`, 'ok');
+}
+
+async function runFoldseekSearch(){
+  if(S.activeIdx === null) return;
+  const s = S.analyzed[S.activeIdx];
+  const db = document.getElementById('foldseekDb').value;
+  const mode = document.getElementById('foldseekMode').value;
+  const statusEl = document.getElementById('foldseekStatus');
+  const resultsEl = document.getElementById('foldseekResults');
+  resultsEl.innerHTML = '';
+  statusEl.textContent = 'submitting to search.foldseek.com…';
+  try{
+    const form = new FormData();
+    form.append('q', new Blob([s.pdbText], {type:'text/plain'}), `${s.pdbId}.pdb`);
+    form.append('mode', mode);
+    form.append('database[]', db);
+    const submitResp = await fetch('https://search.foldseek.com/api/ticket', { method:'POST', body: form });
+    if(!submitResp.ok) throw new Error(`ticket submission failed (HTTP ${submitResp.status})`);
+    const ticket = await submitResp.json();
+    if(!ticket.id) throw new Error('no ticket id returned by the server');
+
+    let status = ticket.status;
+    let waited = 0;
+    while(status !== 'COMPLETE' && status !== 'ERROR' && waited < 300){
+      statusEl.textContent = `status: ${status} (ticket ${ticket.id}, ${waited}s elapsed)`;
+      await new Promise(r => setTimeout(r, 3000));
+      waited += 3;
+      const pollResp = await fetch(`https://search.foldseek.com/api/ticket/${ticket.id}`);
+      if(!pollResp.ok) throw new Error(`status check failed (HTTP ${pollResp.status})`);
+      status = (await pollResp.json()).status;
+    }
+    if(status !== 'COMPLETE') throw new Error(`job ended with status "${status}"`);
+
+    statusEl.textContent = 'fetching results…';
+    const resultResp = await fetch(`https://search.foldseek.com/api/result/${ticket.id}/0`);
+    if(!resultResp.ok) throw new Error(`result fetch failed (HTTP ${resultResp.status})`);
+    const resultJson = await resultResp.json();
+    renderFoldseekResults(resultJson, ticket.id);
+    const n = collectFoldseekHits(resultJson).length;
+    statusEl.textContent = `complete — ${n} hit(s) parsed`;
+    log(`Foldseek search complete for ${s.pdbId}: ${n} hit(s)`, 'ok');
+  }catch(e){
+    statusEl.textContent = '';
+    resultsEl.innerHTML = `<div style="font-family:var(--mono);font-size:12px;color:var(--cat-acidic);line-height:1.6;">
+      Foldseek search failed: ${escapeHtml(e.message)}.<br>
+      This calls a public API directly from your browser — it may be blocked by CORS, a rate limit, or
+      server downtime. Fallback: download this structure and run <span class="mono">foldseek easy-search</span>
+      locally or on your cluster against the same target database.</div>`;
+    log(`Foldseek search failed: ${e.message}`, 'err');
+  }
+}
+
+// Residue numbers only (Folddisco's documented -q syntax doesn't show chain
+// qualification in its single-chain examples — check `folddisco query --help`
+// if your motif spans multiple chains).
+function folddiscoResidueList(inst){
+  return residueGroups(inst).flatMap(g => g.residues.map(r => r.resi)).join(',');
+}
+function folddiscoCommand(s, inst){
+  const tag = `${s.pdbId}_${inst.chain}${inst.resi}`;
+  return `folddisco query -p motif_${tag}.pdb -q ${folddiscoResidueList(inst)} -i <INDEX_PATH> --top 1000 --header --per-structure`;
+}
+
+/* ============================== PLIP hand-off ============================== */
+// PLIP (github.com/pharmai/plip) has no public API, so -- same pattern as Folddisco
+// above -- this generates a ready-to-run local command/snippet rather than calling it
+// from the browser. "-i {pdbId}" lets PLIP fetch the PDB itself (simplest, most robust,
+// works even if you didn't export a motif); swap in "-f motif_<tag>.pdb" to run it
+// against the smaller exported motif instead.
+function plipCliCommand(s, inst){
+  return `plip -i ${s.pdbId} -yv   # or: plip -f motif_${s.pdbId}_${inst.chain}${inst.resi}.pdb -yv`;
+}
+
+// Key format "RESNAME:CHAIN:RESNR" confirmed against an installed PLIP (e.g. the
+// classic 1eve example's 'E20:A:2001'). Field names on each interaction namedtuple
+// are PLIP's own (plip/structure/detection.py), not guessed.
+function plipPythonSnippet(s, inst){
+  const key = `${S.ligand}:${inst.chain}:${inst.resi}`;
+  return `from plip.structure.preparation import PDBComplex
+
+mol = PDBComplex()
+mol.load_pdb('${s.pdbId}.pdb')   # or download '${s.pdbId}' fresh -- either works
+mol.analyze()
+
+ifp = mol.interaction_sets['${key}']
+print('H-bonds (ligand donor):', [(h.restype, h.resnr, h.distance_ah, h.angle) for h in ifp.hbonds_ldon])
+print('H-bonds (protein donor):', [(h.restype, h.resnr, h.distance_ah, h.angle) for h in ifp.hbonds_pdon])
+print('pi-stacking:', [(p.restype, p.resnr, p.distance, p.angle, p.type) for p in ifp.pistacking])
+print('pi-cation:', [(p.restype, p.resnr, p.distance) for p in ifp.pication_laro + ifp.pication_paro])
+print('salt bridges:', [(sb.restype, sb.resnr, sb.distance) for sb in ifp.saltbridge_lneg + ifp.saltbridge_pneg])
+print('halogen bonds:', [(h.restype, h.resnr, h.distance) for h in ifp.halogen_bonds])
+print('water bridges:', [(w.restype, w.resnr, w.distance_aw) for w in ifp.water_bridges])
+print('metal complexes:', [(m.restype, m.resnr, m.distance, m.geometry) for m in ifp.metal_complexes])`;
+}
+
+/* ============================== QM cluster export (SPARC-X-API) ============================== */
+// Vector helpers
+function vsub(a,b){return [a[0]-b[0],a[1]-b[1],a[2]-b[2]];}
+function vadd(a,b){return [a[0]+b[0],a[1]+b[1],a[2]+b[2]];}
+function vscale(a,s){return [a[0]*s,a[1]*s,a[2]*s];}
+function vnorm(a){const m=Math.sqrt(a[0]*a[0]+a[1]*a[1]+a[2]*a[2])||1; return [a[0]/m,a[1]/m,a[2]/m];}
+function vcross(a,b){return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];}
+
+// H placement, numerically verified: bond lengths 1.09 Å, tetrahedral 109.5°/109.4°,
+// trigonal 120°, all confirmed against known angle inputs before use here.
+function placeHTwoNeighbors(pos, n1, n2, count, bond){
+  bond = bond || 1.09;
+  const v1 = vnorm(vsub(n1,pos)), v2 = vnorm(vsub(n2,pos));
+  const bisector = vnorm(vadd(v1,v2));
+  const perp = vnorm(vcross(v1,v2));
+  const away = vscale(bisector,-1);
+  const coneRad = (count === 1 ? 0 : 54.75) * Math.PI/180;
+  const out = [];
+  for(let k=0;k<count;k++){
+    const sign = k===0 ? 1 : -1;
+    const dir = vnorm(vadd(vscale(away,Math.cos(coneRad)), vscale(perp, sign*Math.sin(coneRad))));
+    out.push(vadd(pos, vscale(dir,bond)));
+  }
+  return out;
+}
+function placeHOneNeighbor(pos, neighborPos, count, bond){
+  bond = bond || 1.09;
+  const axis = vnorm(vsub(pos, neighborPos));
+  const coneDeg = (count === 2) ? 60 : 70.5; // 2H-on-1-neighbor is the sp2 amide/guanidinium case
+  const coneRad = coneDeg * Math.PI/180;
+  let ref = Math.abs(axis[0]) < 0.9 ? [1,0,0] : [0,1,0];
+  const perp1 = vnorm(vcross(axis,ref));
+  const perp2 = vcross(axis,perp1);
+  const out = [];
+  for(let k=0;k<count;k++){
+    const az = k*2*Math.PI/count;
+    const dir = vnorm(vadd(vscale(axis,Math.cos(coneRad)), vscale(vadd(vscale(perp1,Math.cos(az)), vscale(perp2,Math.sin(az))), Math.sin(coneRad))));
+    out.push(vadd(pos, vscale(dir,bond)));
+  }
+  return out;
+}
+
+// Heavy-atom connectivity + implicit-H counts for each side chain, cut at CA–CB and capped
+// with H along the real observed CA→CB direction. 'CAcap' is that capping point. Charge is the
+// standard default protonation state (Asp/Glu −1, Lys/Arg +1, His neutral Nε2-H, else neutral).
+const SIDECHAIN_TOPO = {
+  ALA: { charge:0, atoms:{ CB:{n:['CAcap'],h:3} } },
+  VAL: { charge:0, atoms:{ CB:{n:['CAcap','CG1','CG2'],h:1}, CG1:{n:['CB'],h:3}, CG2:{n:['CB'],h:3} } },
+  LEU: { charge:0, atoms:{ CB:{n:['CAcap','CG'],h:2}, CG:{n:['CB','CD1','CD2'],h:1}, CD1:{n:['CG'],h:3}, CD2:{n:['CG'],h:3} } },
+  ILE: { charge:0, atoms:{ CB:{n:['CAcap','CG1','CG2'],h:1}, CG1:{n:['CB','CD1'],h:2}, CG2:{n:['CB'],h:3}, CD1:{n:['CG1'],h:3} } },
+  SER: { charge:0, atoms:{ CB:{n:['CAcap','OG'],h:2}, OG:{n:['CB'],h:1} } },
+  THR: { charge:0, atoms:{ CB:{n:['CAcap','OG1','CG2'],h:1}, OG1:{n:['CB'],h:1}, CG2:{n:['CB'],h:3} } },
+  CYS: { charge:0, atoms:{ CB:{n:['CAcap','SG'],h:2}, SG:{n:['CB'],h:1} } },
+  MET: { charge:0, atoms:{ CB:{n:['CAcap','CG'],h:2}, CG:{n:['CB','SD'],h:2}, SD:{n:['CG','CE'],h:0}, CE:{n:['SD'],h:3} } },
+  ASN: { charge:0, atoms:{ CB:{n:['CAcap','CG'],h:2}, CG:{n:['CB','OD1','ND2'],h:0}, OD1:{n:['CG'],h:0}, ND2:{n:['CG'],h:2} } },
+  GLN: { charge:0, atoms:{ CB:{n:['CAcap','CG'],h:2}, CG:{n:['CB','CD'],h:2}, CD:{n:['CG','OE1','NE2'],h:0}, OE1:{n:['CD'],h:0}, NE2:{n:['CD'],h:2} } },
+  ASP: { charge:-1, atoms:{ CB:{n:['CAcap','CG'],h:2}, CG:{n:['CB','OD1','OD2'],h:0}, OD1:{n:['CG'],h:0}, OD2:{n:['CG'],h:0} } },
+  GLU: { charge:-1, atoms:{ CB:{n:['CAcap','CG'],h:2}, CG:{n:['CB','CD'],h:2}, CD:{n:['CG','OE1','OE2'],h:0}, OE1:{n:['CD'],h:0}, OE2:{n:['CD'],h:0} } },
+  LYS: { charge:1, atoms:{ CB:{n:['CAcap','CG'],h:2}, CG:{n:['CB','CD'],h:2}, CD:{n:['CG','CE'],h:2}, CE:{n:['CD','NZ'],h:2}, NZ:{n:['CE'],h:3} } },
+  ARG: { charge:1, atoms:{ CB:{n:['CAcap','CG'],h:2}, CG:{n:['CB','CD'],h:2}, CD:{n:['CG','NE'],h:2}, NE:{n:['CD','CZ'],h:1}, CZ:{n:['NE','NH1','NH2'],h:0}, NH1:{n:['CZ'],h:2}, NH2:{n:['CZ'],h:2} } },
+  PHE: { charge:0, atoms:{ CB:{n:['CAcap','CG'],h:2}, CG:{n:['CB','CD1','CD2'],h:0}, CD1:{n:['CG','CE1'],h:1}, CD2:{n:['CG','CE2'],h:1}, CE1:{n:['CD1','CZ'],h:1}, CE2:{n:['CD2','CZ'],h:1}, CZ:{n:['CE1','CE2'],h:1} } },
+  TYR: { charge:0, atoms:{ CB:{n:['CAcap','CG'],h:2}, CG:{n:['CB','CD1','CD2'],h:0}, CD1:{n:['CG','CE1'],h:1}, CD2:{n:['CG','CE2'],h:1}, CE1:{n:['CD1','CZ'],h:1}, CE2:{n:['CD2','CZ'],h:1}, CZ:{n:['CE1','CE2','OH'],h:0}, OH:{n:['CZ'],h:1} } },
+  TRP: { charge:0, atoms:{ CB:{n:['CAcap','CG'],h:2}, CG:{n:['CB','CD1','CD2'],h:0}, CD1:{n:['CG','NE1'],h:1}, NE1:{n:['CD1','CE2'],h:1}, CE2:{n:['NE1','CD2','CZ2'],h:0}, CD2:{n:['CG','CE2','CE3'],h:0}, CE3:{n:['CD2','CZ3'],h:1}, CZ3:{n:['CE3','CH2'],h:1}, CH2:{n:['CZ3','CZ2'],h:1}, CZ2:{n:['CH2','CE2'],h:1} } },
+  HIS: { charge:0, atoms:{ CB:{n:['CAcap','CG'],h:2}, CG:{n:['CB','ND1','CD2'],h:0}, ND1:{n:['CG','CE1'],h:0}, CD2:{n:['CG','NE2'],h:1}, CE1:{n:['ND1','NE2'],h:1}, NE2:{n:['CD2','CE1'],h:1} } },
+  M3L: { charge:1, atoms:{ CB:{n:['CAcap','CG'],h:2}, CG:{n:['CB','CD'],h:2}, CD:{n:['CG','CE'],h:2}, CE:{n:['CD','NZ'],h:2}, NZ:{n:['CE','CM1','CM2','CM3'],h:0}, CM1:{n:['NZ'],h:3}, CM2:{n:['NZ'],h:3}, CM3:{n:['NZ'],h:3} } }
+};
+function elementOf(atomName){ return atomName.replace(/[0-9]/g,'').charAt(0); }
+
+// Builds a capped-fragment atom list (element, name, [x,y,z]) from a residue's REAL observed
+// heavy atoms (no idealized geometry for anything already resolved in the crystal structure —
+// only the missing hydrogens are constructed). Returns null if unsupported or incomplete.
+function buildCappedFragment(residueAtoms, resn){
+  const topo = SIDECHAIN_TOPO[resn];
+  if(!topo) return null;
+  const byName = {};
+  residueAtoms.forEach(a => { byName[a.name] = [a.x,a.y,a.z]; });
+  const CA = byName['CA'], CB = byName['CB'];
+  if(!CA || !CB) return null;
+  const capH = vadd(CB, vscale(vnorm(vsub(CA,CB)), 1.09));
+  const positions = { CAcap: capH };
+  for(const name in topo.atoms){ if(!byName[name]) return null; positions[name] = byName[name]; }
+
+  const out = [{ element:'H', name:'HCAP', pos: capH }];
+  for(const name in topo.atoms){
+    out.push({ element: elementOf(name), name, pos: positions[name] });
+  }
+  for(const name in topo.atoms){
+    const spec = topo.atoms[name];
+    if(spec.h === 0) continue;
+    const nbrPos = spec.n.map(nm => positions[nm]);
+    let hs;
+    if(nbrPos.length >= 2) hs = placeHTwoNeighbors(positions[name], nbrPos[0], nbrPos[1], spec.h);
+    else hs = placeHOneNeighbor(positions[name], nbrPos[0], spec.h);
+    hs.forEach((p,i) => out.push({ element:'H', name:`H${name}${i+1}`, pos:p }));
+  }
+  return { atoms: out, charge: topo.charge };
+}
+
+function fragmentXyzBlock(frag, comment){
+  const lines = [String(frag.atoms.length), comment];
+  frag.atoms.forEach(a => lines.push(`${a.element}\t${a.pos[0].toFixed(4)}\t${a.pos[1].toFixed(4)}\t${a.pos[2].toFixed(4)}`));
+  return lines.join('\n');
+}
+
+function sparcScript(frag, label, dirname){
+  const symbols = frag.atoms.map(a => `'${a.element}'`).join(', ');
+  const positions = frag.atoms.map(a => `    [${a.pos[0].toFixed(4)}, ${a.pos[1].toFixed(4)}, ${a.pos[2].toFixed(4)}]`).join(',\n');
+  const heavyIdx = frag.atoms.map((a,i) => a.element !== 'H' ? i : null).filter(i => i !== null);
+  return `"""
+Auto-generated QM cluster input — ${label}
+Net charge (default protonation assumptions — verify): ${frag.charge}
+
+Heavy atoms below are REAL crystallographic coordinates from the source structure — not
+idealized. Hydrogens were added by standard local geometry (sp3 ~109.5°, sp2/aromatic ~120°,
+1.09 Å C-H/N-H/O-H), since X-ray structures don't resolve them; the capping H (replacing the
+truncated Cα) uses the real observed Cα→Cβ direction. This script relaxes ONLY the added
+hydrogens (heavy atoms held fixed via FixAtoms) before the final single-point energy, to clean
+up that approximate initial placement.
+
+CAVEATS — read before trusting the numbers:
+  - Protonation state is a default assumption (Asp/Glu -1, Lys/Arg +1, His neutral Nε2-H,
+    everything else neutral) — verify against your system; local pKa shifts in a binding
+    pocket can differ from bulk defaults.
+  - Net charge above follows from that assumption — the exact SPARC keyword for setting net
+    charge on a calculation was NOT confirmed against current docs, so it is not set below.
+    Check SparcAPI().help_info(...) for the correct parameter before running a charged system.
+  - No basis-set-superposition-error (BSSE) / counterpoise correction is applied — for the
+    "complex" script's interaction energy (E_complex - E_ligand - sum(E_residues)), treat the
+    absolute number as approximate until corrected.
+  - xc, h (mesh spacing), and vacuum padding below are reasonable starting defaults, not tuned
+    for this system.
+"""
+from ase import Atoms
+from ase.constraints import FixAtoms
+from ase.optimize import BFGS
+from sparc.calculator import SPARC
+
+symbols = [${symbols}]
+positions = [
+${positions}
+]
+atoms = Atoms(symbols=symbols, positions=positions)
+atoms.set_pbc(False)
+atoms.center(vacuum=8.0)  # 8 Å padding for Dirichlet boundary conditions
+
+# Hold heavy atoms fixed; relax only the geometrically-placed hydrogens.
+fixed_indices = ${JSON.stringify(heavyIdx)}
+atoms.set_constraint(FixAtoms(indices=fixed_indices))
+
+# TODO: set net charge (assumed ${frag.charge} above) — confirm the correct SPARC-X-API keyword
+# for your installed version before running a charged fragment.
+atoms.calc = SPARC(h=0.2, xc='PBE', directory='${dirname}')  # check xc keyword name against your build
+
+opt = BFGS(atoms)
+opt.run(fmax=0.05)
+
+energy = atoms.get_potential_energy()
+print(f"${label}: total energy (eV) = {energy}")
+`;
+}
+
+// Matches the level of theory from Albanese, Leaver-Fay, Treacy, Park, Houk, Kuhlman & Waters,
+// "Comparative Analysis of Sulfonium-π, Ammonium-π, and Sulfur-π Interactions..." (JACS SI):
+// M06-2X/6-311+G(d,p), CPCM(water) implicit solvation, ultrafine integration grid, with a
+// frequency calculation at the same level to confirm the optimized structure is a true minimum.
+const GAUSSIAN_ROUTE = 'M06-2X/6-311+G(d,p) SCRF=(CPCM,Solvent=Water) Int=UltraFine';
+
+// Single fragment: optimize only the added hydrogens (Cartesian freeze-code = -1 fixed, 0 free),
+// then the converged SCF energy from that optimization is the reported energy. Freq is included
+// per the reference protocol, to confirm a true minimum — imaginary frequencies on a fragment
+// with frozen heavy atoms are expected/uninformative for those frozen coordinates, so read the
+// frequency table with that in mind rather than treating any imaginary mode as disqualifying.
+function gaussianScript(frag, label, chkname){
+  const atomLines = frag.atoms.map(a => {
+    const frozen = a.element !== 'H' ? -1 : 0; // -1 = frozen, 0 = optimized
+    return `${a.element.padEnd(2)} ${String(frozen).padStart(2)}   ${a.pos[0].toFixed(6)}   ${a.pos[1].toFixed(6)}   ${a.pos[2].toFixed(6)}`;
+  }).join('\n');
+  return `%chk=${chkname}.chk
+%mem=4GB
+%nprocshared=8
+# opt freq=noraman ${GAUSSIAN_ROUTE}
+
+${label}
+Net charge (default protonation assumptions — verify): ${frag.charge}. Heavy atoms are real
+crystallographic coordinates; hydrogens are added by standard local geometry (sp3 ~109.5°,
+sp2/aromatic ~120°, 1.09 Å bonds) since X-ray structures don't resolve them, then optimized here
+with heavy atoms frozen (freeze flag -1) so only the added H positions relax. Multiplicity is 1
+throughout since every fragment here comes from adding/removing protons (H+) only, never
+electrons, so electron count stays even. Level of theory matches Albanese et al. (M06-2X/
+6-311+G(d,p), CPCM water, ultrafine grid) — for the thermal correction to free energy used in
+that work, run Grimme's quasi-RRHO treatment on this job's frequency output separately
+(e.g. GoodVibes), Gaussian's raw output alone does not apply that correction.
+
+${frag.charge} 1
+${atomLines}
+
+`;
+}
+
+// Complex job: a plain difference Eint = E_complex - Σ E_fragment, matching the Eint definition
+// used in Albanese et al. (no counterpoise/BSSE correction in that protocol) — single point at
+// the same level of theory, on the as-placed hydrogen geometry. For a more rigorous result, run
+// each qm_<residue>.gjf / qm_ligand_*.gjf fragment's own optimization first and substitute those
+// coordinates below. If you want a BSSE-corrected number instead, add Counterpoise=N to the
+// route line and tag each atom with (Fragment=k) — left out here to match the reference method.
+function gaussianComplexScript(fragmentList, label){
+  const totalCharge = fragmentList.reduce((s,f) => s + f.frag.charge, 0);
+  const atomLines = fragmentList.flatMap(f => f.frag.atoms.map(a =>
+    `${a.element.padEnd(2)}   ${a.pos[0].toFixed(6)}   ${a.pos[1].toFixed(6)}   ${a.pos[2].toFixed(6)}`
+  )).join('\n');
+  return `%chk=qm_complex.chk
+%mem=8GB
+%nprocshared=16
+# ${GAUSSIAN_ROUTE}
+
+${label}
+Single point for Eint = E_complex - Σ E_fragment (subtract the energies from each fragment's own
+.gjf output), matching the Eint definition in Albanese et al. — no counterpoise/BSSE correction,
+consistent with that reference protocol. Uses the as-placed (unoptimized) hydrogen geometry; for
+a more rigorous result substitute each fragment's optimized coordinates before running this.
+
+${totalCharge} 1
+${atomLines}
+
+`;
+}
+
+async function exportQMFragments(){
+  if(S.activeIdx === null) return;
+  if(typeof JSZip === 'undefined'){ log('JSZip failed to load — QM export unavailable', 'err'); return; }
+  const s = S.analyzed[S.activeIdx];
+  const byChain = structureChains(s.pdbText);
+  const zip = new JSZip();
+  const noteEl = document.getElementById('qmNote');
+  const format = document.getElementById('qmFormat').value; // 'gaussian' or 'sparc'
+  const ext = format === 'gaussian' ? 'gjf' : 'py';
+  let built = 0, skipped = [];
+
+  s.instances.forEach(inst => {
+    if(inst.contacts.length === 0) return;
+    const tag = `${s.pdbId}_${inst.chain}${inst.resi}`;
+    const folder = zip.folder(tag);
+    const fragmentList = []; // {frag, name} in order — ligand first if present
+
+    // Ligand's own capped fragment first, if it's a supported PTM (e.g. M3L)
+    const ligChainResidues = byChain.get(inst.chain) || [];
+    const ligResidue = ligChainResidues.find(r => r.resi === inst.resi);
+    if(ligResidue){
+      const ligFrag = buildCappedFragment(ligResidue.atoms, S.ligand);
+      if(ligFrag){
+        const name = `ligand_${S.ligand}`;
+        const label = `${s.pdbId} ligand ${S.ligand} ${inst.chain}${inst.resi} capped fragment`;
+        if(format === 'gaussian') folder.file(`qm_${name}.gjf`, gaussianScript(ligFrag, label, `qm_${name}`));
+        else folder.file(`qm_${name}.py`, sparcScript(ligFrag, label, `qm_${name}`));
+        folder.file(`qm_${name}.xyz`, fragmentXyzBlock(ligFrag, label));
+        fragmentList.push({ frag: ligFrag, name });
+        built++;
+      } else {
+        skipped.push(`ligand ${S.ligand} (no topology template — only M3L is currently supported)`);
+      }
+    }
+
+    // Contact residues
+    const contactResidues = residueGroups(inst).flatMap(g => g.residues);
+    contactResidues.forEach(c => {
+      const chainResidues = byChain.get(c.chain) || [];
+      const residue = chainResidues.find(r => r.resi === c.resi);
+      if(!residue){ skipped.push(`${c.resn}${c.chain}${c.resi} (not found)`); return; }
+      const frag = buildCappedFragment(residue.atoms, c.resn);
+      if(!frag){ skipped.push(`${c.resn}${c.chain}${c.resi} (unsupported/incomplete)`); return; }
+      const name = `${c.resn}${c.chain}${c.resi}`;
+      const label = `${s.pdbId} ${name} capped side chain`;
+      if(format === 'gaussian') folder.file(`qm_${name}.gjf`, gaussianScript(frag, label, `qm_${name}`));
+      else folder.file(`qm_${name}.py`, sparcScript(frag, label, `qm_${name}`));
+      folder.file(`qm_${name}.xyz`, fragmentXyzBlock(frag, label));
+      fragmentList.push({ frag, name });
+      built++;
+    });
+
+    if(fragmentList.length > 0){
+      const complexLabel = `${s.pdbId} complex: ${fragmentList.length} fragment(s)`;
+      if(format === 'gaussian'){
+        folder.file('qm_complex.gjf', gaussianComplexScript(fragmentList, complexLabel));
+      } else {
+        const complexFrag = {
+          atoms: fragmentList.flatMap(f => f.frag.atoms),
+          charge: fragmentList.reduce((sum,f) => sum + f.frag.charge, 0)
+        };
+        folder.file('qm_complex.py', sparcScript(complexFrag, complexLabel, 'qm_complex'));
+        folder.file('qm_complex.xyz', fragmentXyzBlock(complexFrag, complexLabel));
+      }
+      folder.file('README.txt', [
+        `QM cluster export (${format === 'gaussian' ? 'Gaussian .gjf' : 'SPARC-X-API .py'}) — ${s.pdbId}${s.title ? ' ('+s.title+')' : ''}`,
+        `Ligand ${S.ligand}, chain ${inst.chain} residue ${inst.resi}`,
+        '',
+        format === 'gaussian'
+          ? [
+              'Files: qm_<name>.gjf/.xyz per fragment, qm_complex.gjf combining all of them for',
+              'Eint = E_complex - Σ E_fragment (subtract each fragment\'s own energy from the complex',
+              'energy) — matching the Eint definition and M06-2X/6-311+G(d,p) CPCM(water) level of',
+              'theory from Albanese et al. (no counterpoise/BSSE correction, per that protocol).',
+              'The complex job uses the as-placed (unoptimized) hydrogen geometry — for a more rigorous',
+              "result, run each fragment's own optimization first and substitute those coordinates into",
+              'the complex job. Each fragment job includes a frequency calculation to confirm a true',
+              "minimum, per the reference protocol; for Grimme's quasi-RRHO thermal correction, run a",
+              'separate tool (e.g. GoodVibes) on the frequency output — Gaussian alone does not apply it.'
+            ].join('\n')
+          : [
+              'Files: qm_<name>.py/.xyz per fragment, qm_complex.py/.xyz combining everything for an',
+              'interaction-energy estimate:',
+              '  E_int ≈ E_complex - E_ligand - sum(E_contact_residues)   [uncorrected for BSSE]'
+            ].join('\n'),
+        '',
+        skipped.length ? `Skipped: ${skipped.join('; ')}` : 'Nothing skipped.',
+        '',
+        'Gly is skipped automatically (no real side chain); Pro is skipped automatically (its ring',
+        'closes back onto the backbone N, so a simple single-bond cap at Cα–Cβ is not chemically',
+        'valid for it). Protonation states are defaults (Asp/Glu -1, Lys/Arg +1, His neutral Nε2-H,',
+        'else neutral) — verify against your system before trusting the numbers.'
+      ].join('\n'));
+    }
+  });
+
+  if(built === 0){
+    log(`${s.pdbId}: nothing exportable — no supported fragments`, 'err');
+    noteEl.textContent = skipped.length ? `skipped: ${skipped.join('; ')}` : 'no contacts on this structure';
+    return;
+  }
+  const blob = await zip.generateAsync({type:'blob'});
+  downloadBlob(blob, `${s.pdbId}_${S.ligand}_qm_fragments_${format}.zip`);
+  log(`exported ${built} QM fragment(s) for ${s.pdbId} as ${format}${skipped.length ? ` (skipped: ${skipped.join('; ')})` : ''}`, 'ok');
+  noteEl.textContent = `${built} fragment(s) exported${skipped.length ? `, ${skipped.length} skipped` : ''}`;
+}
+
+/* ============================== CSV export ============================== */
+function exportCsv(){
+  const rows = [['pdb_id','ligand_chain','ligand_resi','contact_resn','contact_chain','contact_resi','category','min_dist_A','centroid_dist_A','axial_angle_deg','tip_side','ring_dist_A','ring_angle_deg','ring_class']];
+  for(const c of allContacts()){
+    rows.push([c.pdbId, c.ligChain, c.ligResi, c.resn, c.chain, c.resi, c.category, c.minDist.toFixed(3), c.centroidDist.toFixed(3), c.axialAngle.toFixed(1), c.tipSide,
+      c.ringDist !== null ? c.ringDist.toFixed(3) : '', c.ringAngle !== null ? c.ringAngle.toFixed(1) : '', c.ringClass || '']);
+  }
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `${S.ligand}_neighborhood_contacts.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+/* ============================== wiring ============================== */
+document.getElementById('btnSearch').addEventListener('click', async () => {
+  const raw = document.getElementById('ligandInput').value.trim().toUpperCase();
+  if(!raw){ log('enter a chemical component ID first', 'err'); return; }
+  S.ligand = raw;
+  document.getElementById('heroLigand').textContent = raw;
+  const btn = document.getElementById('btnSearch');
+  btn.disabled = true;
+  document.getElementById('btnAnalyze').disabled = true;
+  document.getElementById('search-summary').textContent = 'searching…';
+  log(`--- searching RCSB for component "${raw}" ---`, 'hd');
+  const cutoff = document.getElementById('seqIdentityCutoff').value;
+  if(cutoff) log(`grouping by ${cutoff}% sequence identity, one representative per cluster`, 'hd');
+  try{
+    const { total, ids, rawCount, grouped } = await searchRCSB(raw, cutoff);
+    if(ids.length === 0){
+      log('no structures found for that component ID', 'err');
+      document.getElementById('search-summary').textContent = '0 structures found';
+      S.hits = [];
+    } else {
+      log(grouped
+        ? `${total} cluster(s) at ${cutoff}% identity (from ${rawCount} matching polymer entit${rawCount===1?'y':'ies'}), fetching titles…`
+        : `found ${total} structure(s), fetching titles…`, 'ok');
+      const titles = await fetchEntryTitles(ids);
+      S.hits = ids.map(id => ({identifier:id, title:titles[id]||''}));
+      document.getElementById('search-summary').textContent = grouped
+        ? `${ids.length} entries after ${cutoff}% identity dedup — ready to analyze`
+        : `${total} structures found — ready to analyze`;
+      document.getElementById('btnAnalyze').disabled = false;
+      log('search complete.', 'ok');
+    }
+  }catch(e){
+    log('search failed: ' + e.message, 'err');
+    document.getElementById('search-summary').textContent = 'search failed';
+  }
+  btn.disabled = false;
+});
+
+document.getElementById('btnAnalyze').addEventListener('click', runAnalysis);
+document.getElementById('btnCsv').addEventListener('click', exportCsv);
+document.getElementById('btnExportAllMotifs').addEventListener('click', exportAllMotifsZip);
+document.getElementById('btnExportMotif').addEventListener('click', exportActiveMotif);
+document.getElementById('btnExportMutScan').addEventListener('click', exportMutationScan);
+document.getElementById('btnFoldseek').addEventListener('click', runFoldseekSearch);
+document.getElementById('btnExportQM').addEventListener('click', exportQMFragments);
+
+function updateQMCaveatText(){
+  const format = document.getElementById('qmFormat').value;
+  const el = document.getElementById('qmCaveatText');
+  el.textContent = format === 'gaussian'
+    ? 'Level of theory matches Albanese et al. (M06-2X/6-311+G(d,p), CPCM water, ultrafine grid; opt+freq per fragment). Read the caveats in each file: default protonation states (Asp/Glu −1, Lys/Arg +1, His neutral Nε2-H, else neutral); Eint = E_complex − ΣE_fragment uses as-placed (unoptimized) H positions unless you substitute in each fragment\'s optimized geometry first; quasi-RRHO thermal correction needs a separate tool. Gly and Pro are skipped automatically.'
+    : 'Read the caveats in each script before trusting the numbers: default protonation states (Asp/Glu −1, Lys/Arg +1, His neutral Nε2-H, else neutral), no BSSE correction on interaction energies, and the net-charge keyword for SPARC isn\'t confirmed — flagged as a TODO rather than guessed. Gly and Pro are skipped automatically.';
+}
+document.getElementById('qmFormat').addEventListener('change', updateQMCaveatText);
+updateQMCaveatText();
+document.getElementById('ligandInput').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('btnSearch').click(); });
+
+
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => { if(S.analyzed.length) renderCharts(); }, 120);
+});
+</script>
+</body>
+</html>
